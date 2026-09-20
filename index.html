@@ -1,1 +1,224 @@
-<h1>My Haggis</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Haggis | Coming Soon</title>
+    <meta
+      name="description"
+      content="My Haggis is bringing something fresh online soon."
+    />
+    <style>
+      :root {
+        --bg-1: #2d1406;
+        --bg-2: #4a220d;
+        --panel: rgba(54, 26, 12, 0.72);
+        --panel-border: rgba(255, 201, 122, 0.18);
+        --primary: #f7b267;
+        --primary-soft: #e9772d;
+        --accent: #f3d7a8;
+        --text: #fff5ea;
+        --muted: #f7d9b0;
+        --shadow: rgba(34, 16, 8, 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(247, 178, 103, 0.25), transparent 22%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.12;
+        background:
+          linear-gradient(90deg, rgba(255,255,255,0.08) 0 12%, transparent 12% 24%, rgba(255,255,255,0.08) 24% 36%, transparent 36% 48%, rgba(255,255,255,0.08) 48% 60%, transparent 60% 72%, rgba(255,255,255,0.08) 72% 84%, transparent 84% 100%),
+          linear-gradient(rgba(255,255,255,0.08) 0 12%, transparent 12% 24%, rgba(255,255,255,0.08) 24% 36%, transparent 36% 48%, rgba(255,255,255,0.08) 48% 60%, transparent 60% 72%, rgba(255,255,255,0.08) 72% 84%, transparent 84% 100%);
+        background-size: 28px 28px;
+      }
+
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .card {
+        width: min(720px, 100%);
+        padding: clamp(28px, 5vw, 56px);
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 24px 60px var(--shadow);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 86px;
+        height: 86px;
+        border-radius: 26px;
+        margin-bottom: 22px;
+        background: linear-gradient(135deg, rgba(247, 178, 103, 0.24), rgba(233, 119, 45, 0.18));
+        border: 1px solid rgba(255, 201, 122, 0.28);
+        box-shadow: 0 12px 24px rgba(247, 178, 103, 0.14);
+      }
+
+      .brand svg {
+        width: 52px;
+        height: 52px;
+        display: block;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: rgba(247, 178, 103, 0.14);
+        color: var(--accent);
+        border: 1px solid rgba(255, 201, 122, 0.25);
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        line-height: 0.98;
+        letter-spacing: -0.06em;
+      }
+
+      p {
+        margin: 20px 0 0;
+        max-width: 40rem;
+        font-size: clamp(1rem, 2vw, 1.2rem);
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .meta span {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 32px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 14px 22px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button.primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+        color: #111827;
+        box-shadow: 0 10px 24px rgba(251, 191, 36, 0.3);
+      }
+
+      .button.secondary {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+
+      .footer {
+        margin-top: 28px;
+        font-size: 0.9rem;
+        color: rgba(248, 250, 252, 0.72);
+      }
+
+      @media (max-width: 540px) {
+        .card {
+          padding: 24px 22px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" aria-labelledby="title">
+      <div class="brand" aria-label="My Haggis creature logo">
+        <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="32" cy="32" r="26" fill="#fbbf24" opacity="0.15" />
+            <path d="M18 38c0-8 6-14 14-14s14 6 14 14v6H18v-6Z" fill="#fbbf24" />
+            <path d="M20 25c0-7 5-12 12-12s12 5 12 12v4H20v-4Z" fill="#f7c76b" />
+            <circle cx="26" cy="30" r="2.2" fill="#111827" />
+            <circle cx="38" cy="30" r="2.2" fill="#111827" />
+            <path d="M28 35c2 2 6 2 8 0" stroke="#111827" stroke-width="2.2" />
+            <path d="M22 22l-6-6" stroke="#f7c76b" stroke-width="3" />
+            <path d="M42 22l6-6" stroke="#f7c76b" stroke-width="3" />
+            <path d="M15 43c4 3.5 8.5 5 17 5s13-1.5 17-5" stroke="#111827" stroke-width="3" />
+            <path d="M23 46l-4 8" stroke="#111827" stroke-width="3" />
+            <path d="M41 46l4 8" stroke="#111827" stroke-width="3" />
+            <path d="M28 16c1-2 4-4 8-4s7 2 8 4" stroke="#111827" stroke-width="2.5" />
+          </g>
+        </svg>
+      </div>
+      <div class="eyebrow">myhaggis.com</div>
+      <h1 id="title">My Haggis</h1>
+      <p>
+        A fresh digital presence is on the way. We’re preparing a simple, thoughtful space
+        for ideas, stories, and community.
+      </p>
+
+      <div class="meta" aria-label="Site status">
+        <span>Launching soon</span>
+        <span>Built for the web</span>
+      </div>
+
+      <div class="footer">© 2026 My Haggis</div>
+    </main>
+  </body>
+</html>
