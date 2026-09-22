@@ -204,10 +204,10 @@
             <button class="control" data-action="left" type="button" aria-label="Move left">←</button>
             <button class="control" data-action="rotate" type="button" aria-label="Rotate">↻</button>
             <button class="control" data-action="right" type="button" aria-label="Move right">→</button>
-            <button class="control" data-action="down" type="button" aria-label="Move down">↓</button>
+            <button class="control" data-action="down" type="button" aria-label="Move down; double tap to drop">↓</button>
             <button class="control" data-action="drop" type="button" aria-label="Drop">⇊</button>
           </div>
-          <p class="help">Keyboard: arrows to move · ↑ rotates · space drops · P pauses</p>
+          <p class="help">Arrows move · ↑ rotates · double-tap ↓ or press space to drop · P pauses</p>
           <div id="gameMessage" class="message" role="status" aria-live="polite"></div>
         </section>
 
@@ -283,6 +283,7 @@
       let dropCounter = 0;
       let scoreSaved = false;
       let currentUser = null;
+      let lastDownPress = 0;
 
       /** Creates and returns an empty game board. */
       function createBoard() {
@@ -361,7 +362,8 @@
 
       /** Renders the next queued piece in the preview canvas. */
       function drawNextPiece() {
-        nextContext.fillStyle = 'rgba(0,0,0,.24)';
+        nextContext.clearRect(0, 0, 120, 90);
+        nextContext.fillStyle = '#160b06';
         nextContext.fillRect(0, 0, 120, 90);
         const size = 22;
         const width = nextPiece.matrix[0].length * size;
@@ -464,6 +466,7 @@
         running = true;
         paused = false;
         scoreSaved = false;
+        lastDownPress = 0;
         dropCounter = 0;
         lastTime = performance.now();
         updateStats();
@@ -522,7 +525,7 @@
         const delta = time - lastTime;
         lastTime = time;
         dropCounter += delta;
-        const interval = Math.max(110, 900 - ((level - 1) * 70));
+        const interval = Math.max(80, 760 - ((level - 1) * 85));
         if (dropCounter >= interval) dropPiece();
         drawGame();
         requestAnimationFrame(updateGame);
@@ -557,7 +560,16 @@
       function runAction(action) {
         if (action === 'left') movePiece(-1);
         if (action === 'right') movePiece(1);
-        if (action === 'down') dropPiece(true);
+        if (action === 'down') {
+          const now = performance.now();
+          if (now - lastDownPress <= 300) {
+            lastDownPress = 0;
+            hardDrop();
+          } else {
+            lastDownPress = now;
+            dropPiece(true);
+          }
+        }
         if (action === 'rotate') rotatePiece();
         if (action === 'drop') hardDrop();
         drawGame();
