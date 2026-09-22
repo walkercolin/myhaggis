@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- My Haggis favicon: simplified for clear rendering at small sizes. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">My Haggis</title>
+  <defs>
+    <linearGradient id="background" x1="8" y1="6" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b2a10"/>
+      <stop offset="1" stop-color="#2d1406"/>
+    </linearGradient>
+    <linearGradient id="fur" x1="19" y1="16" x2="47" y2="49" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd38e"/>
+      <stop offset="1" stop-color="#e9772d"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="15" fill="url(#background)"/>
+  <path d="M20 23 13 15l11 4M44 23l7-8-11 4" fill="#f7b267" stroke="#2d1406" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M16 40c0-13 6-22 16-22s16 9 16 22c0 8-6 13-16 13S16 48 16 40Z" fill="url(#fur)" stroke="#2d1406" stroke-width="3"/>
+  <path d="M19 28c4-5 8-7 13-7s9 2 13 7" fill="none" stroke="#ffe3b5" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="26" cy="34" r="3" fill="#2d1406"/>
+  <circle cx="38" cy="34" r="3" fill="#2d1406"/>
+  <path d="M29 40c2 2 4 2 6 0M25 46c4 3 10 3 14 0" fill="none" stroke="#2d1406" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
