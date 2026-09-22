@@ -221,7 +221,7 @@
           </div>
           <button id="signOutButton" class="button secondary" type="button">Sign out</button>
         </div>
-        <div class="eyebrow">Family games</div>
+        <div class="eyebrow">Games</div>
         <h1>Choose a game</h1>
         <div id="games" class="games"></div>
         <div id="emptyGames" class="empty" hidden>No games have been added yet.</div>
@@ -312,7 +312,7 @@
        * Verifies database access and loads private games for the signed-in account.
        */
       async function loadPrivatePortal(user) {
-        loginStatus.textContent = 'Checking family access…';
+        loginStatus.textContent = 'Checking access…';
 
         try {
           const snapshot = await getDocs(collection(db, 'games'));
@@ -320,7 +320,7 @@
           showPortal(user, games);
         } catch (error) {
           console.debug('Portal access was denied', error);
-          loginStatus.textContent = 'This Google account is not authorised for the family portal.';
+          loginStatus.textContent = 'This Google account is not authorised for the portal.';
           await signOut(auth);
         }
       }
