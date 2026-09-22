@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Haggis Blocks | My Haggis Games</title>
+    <meta name="theme-color" content="#2d1406" />
+    <style>
+      :root {
+        --bg: #2d1406;
+        --panel: rgba(60, 29, 13, 0.9);
+        --line: rgba(255, 211, 148, 0.2);
+        --gold: #f7b267;
+        --orange: #e9772d;
+        --cream: #fff5ea;
+        --muted: #f3d7a8;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 18px;
+        color: var(--cream);
+        font-family: Arial, Helvetica, sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(247, 178, 103, 0.22), transparent 28%),
+          linear-gradient(145deg, #2d1406, #54250c);
+        overscroll-behavior: none;
+      }
+
+      button, a { font: inherit; }
+      [hidden] { display: none !important; }
+
+      .shell { width: min(980px, 100%); margin: 0 auto; }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .back { color: var(--muted); text-decoration: none; font-weight: 700; }
+      .back:hover { color: var(--cream); }
+
+      h1 { margin: 0; font-size: clamp(1.7rem, 6vw, 2.7rem); letter-spacing: -0.04em; }
+
+      .game-layout {
+        display: grid;
+        grid-template-columns: minmax(180px, 1fr) minmax(260px, 360px) minmax(180px, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .panel {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        box-shadow: 0 18px 45px rgba(20, 8, 3, 0.28);
+      }
+
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .stat { padding: 12px 8px; text-align: center; border-radius: 12px; background: rgba(255,255,255,.055); }
+      .stat small { display: block; color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; }
+      .stat strong { display: block; margin-top: 4px; font-size: 1.35rem; }
+
+      .board-wrap { position: relative; margin: 0 auto; width: min(100%, 360px); }
+
+      #gameCanvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1 / 2;
+        border: 2px solid rgba(255, 211, 148, 0.3);
+        border-radius: 10px;
+        background: #160b06;
+        image-rendering: pixelated;
+        touch-action: none;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        text-align: center;
+        border-radius: 10px;
+        background: rgba(22, 11, 6, 0.82);
+      }
+
+      .overlay strong { display: block; font-size: 1.8rem; }
+      .overlay span { display: block; margin-top: 8px; color: var(--muted); line-height: 1.45; }
+
+      .button {
+        border: 0;
+        border-radius: 12px;
+        padding: 13px 18px;
+        cursor: pointer;
+        font-weight: 800;
+        color: #2d1406;
+        background: linear-gradient(135deg, var(--gold), var(--orange));
+      }
+
+      .button:focus-visible, .control:focus-visible, .back:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+      .overlay .button { margin-top: 18px; }
+
+      h2 { margin: 0 0 14px; font-size: 1rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+      #nextCanvas {
+        display: block;
+        width: 120px;
+        height: 90px;
+        margin: 0 auto 18px;
+        border-radius: 12px;
+        background: rgba(0,0,0,.24);
+      }
+
+      .leaderboard { margin: 0; padding: 0; list-style: none; }
+      .leaderboard li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .leaderboard li:last-child { border-bottom: 0; }
+      .leaderboard span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .leaderboard em { color: var(--muted); font-style: normal; }
+      .empty { color: var(--muted); line-height: 1.5; }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 9px;
+        width: min(100%, 520px);
+        margin: 16px auto 0;
+      }
+
+      .control {
+        min-height: 54px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        color: var(--cream);
+        background: rgba(255,255,255,.08);
+        font-size: 1.35rem;
+        font-weight: 800;
+        touch-action: manipulation;
+      }
+
+      .control:active { transform: translateY(1px); background: rgba(247,178,103,.2); }
+      .help { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: .85rem; line-height: 1.5; }
+      .message { min-height: 22px; margin-top: 12px; color: var(--muted); text-align: center; }
+
+      @media (max-width: 760px) {
+        body { padding: 12px; }
+        .game-layout { grid-template-columns: 1fr; }
+        .score-panel { order: 2; }
+        .board-panel { order: 1; padding: 12px; }
+        .side-panel { order: 3; }
+        .stats { max-width: 360px; margin: auto; }
+        .side-panel { display: grid; grid-template-columns: 140px 1fr; gap: 18px; }
+      }
+
+      @media (max-width: 430px) {
+        .topbar { align-items: flex-start; flex-direction: column; }
+        .side-panel { grid-template-columns: 1fr; }
+        .controls { gap: 6px; }
+        .control { min-height: 50px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="gameShell" class="shell" hidden>
+      <header class="topbar">
+        <div>
+          <a class="back" href="../../">← Family games</a>
+          <h1>Haggis Blocks</h1>
+        </div>
+        <button id="pauseButton" class="button" type="button">Pause</button>
+      </header>
+
+      <div class="game-layout">
+        <section class="panel score-panel" aria-label="Current score">
+          <div class="stats">
+            <div class="stat"><small>Score</small><strong id="score">0</strong></div>
+            <div class="stat"><small>Lines</small><strong id="lines">0</strong></div>
+            <div class="stat"><small>Level</small><strong id="level">1</strong></div>
+          </div>
+          <p class="help">Clear complete rows. The blocks fall faster as your level rises.</p>
+        </section>
+
+        <section class="panel board-panel">
+          <div class="board-wrap">
+            <canvas id="gameCanvas" width="300" height="600" aria-label="Haggis Blocks game board"></canvas>
+            <div id="gameOverlay" class="overlay">
+              <div>
+                <strong id="overlayTitle">Ready?</strong>
+                <span id="overlayText">Stack the blocks and clear as many lines as you can.</span>
+                <button id="startButton" class="button" type="button">Start game</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls" aria-label="Game controls">
+            <button class="control" data-action="left" type="button" aria-label="Move left">←</button>
+            <button class="control" data-action="rotate" type="button" aria-label="Rotate">↻</button>
+            <button class="control" data-action="right" type="button" aria-label="Move right">→</button>
+            <button class="control" data-action="down" type="button" aria-label="Move down">↓</button>
+            <button class="control" data-action="drop" type="button" aria-label="Drop">⇊</button>
+          </div>
+          <p class="help">Keyboard: arrows to move · ↑ rotates · space drops · P pauses</p>
+          <div id="gameMessage" class="message" role="status" aria-live="polite"></div>
+        </section>
+
+        <aside class="panel side-panel">
+          <div>
+            <h2>Next block</h2>
+            <canvas id="nextCanvas" width="120" height="90" aria-label="Next block"></canvas>
+          </div>
+          <div>
+            <h2>Family high scores</h2>
+            <ol id="leaderboard" class="leaderboard"></ol>
+            <div id="emptyScores" class="empty">No scores yet. Be the first!</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <section id="accessMessage" class="shell panel" aria-live="polite">Checking family access…</section>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+      import {
+        addDoc,
+        collection,
+        getDocs,
+        getFirestore,
+        serverTimestamp
+      } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
+      const firebaseConfig = {
+        apiKey: 'AIzaSyBC-jGU64gc-xBnAz3b9Ld8SZRcJCym4QE',
+        authDomain: 'myhaggis-games.firebaseapp.com',
+        projectId: 'myhaggis-games',
+        storageBucket: 'myhaggis-games.firebasestorage.app',
+        messagingSenderId: '914472191213',
+        appId: '1:914472191213:web:d2002ccca9855e5d9b38e4'
+      };
+
+      const COLS = 10;
+      const ROWS = 20;
+      const BLOCK = 30;
+      const GAME_ID = 'haggis-blocks';
+      const LINE_POINTS = [0, 100, 300, 500, 800];
+      const COLOURS = ['#000000', '#4cc9f0', '#f7b267', '#9b5de5', '#52b788', '#ef476f', '#ffd166', '#4895ef'];
+      const SHAPES = {
+        I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+        L: [[0,0,2],[2,2,2],[0,0,0]],
+        T: [[0,3,0],[3,3,3],[0,0,0]],
+        S: [[0,4,4],[4,4,0],[0,0,0]],
+        Z: [[5,5,0],[0,5,5],[0,0,0]],
+        O: [[6,6],[6,6]],
+        J: [[7,0,0],[7,7,7],[0,0,0]]
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const canvas = document.querySelector('#gameCanvas');
+      const context = canvas.getContext('2d');
+      const nextContext = document.querySelector('#nextCanvas').getContext('2d');
+
+      let board = createBoard();
+      let player = null;
+      let nextPiece = null;
+      let bag = [];
+      let score = 0;
+      let lines = 0;
+      let level = 1;
+      let running = false;
+      let paused = false;
+      let lastTime = 0;
+      let dropCounter = 0;
+      let scoreSaved = false;
+      let currentUser = null;
+
+      /** Creates and returns an empty game board. */
+      function createBoard() {
+        return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      }
+
+      /** Refills and shuffles the seven-piece bag for fair piece distribution. */
+      function refillBag() {
+        bag = Object.keys(SHAPES);
+        for (let index = bag.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [bag[index], bag[swapIndex]] = [bag[swapIndex], bag[index]];
+        }
+      }
+
+      /** Returns the next piece from the shuffled bag. */
+      function takePiece() {
+        if (!bag.length) refillBag();
+        const name = bag.pop();
+        return { matrix: SHAPES[name].map((row) => [...row]), x: 0, y: 0 };
+      }
+
+      /** Positions the queued piece at the top and prepares another preview piece. */
+      function spawnPiece() {
+        player = nextPiece || takePiece();
+        nextPiece = takePiece();
+        player.y = 0;
+        player.x = Math.floor((COLS - player.matrix[0].length) / 2);
+        drawNextPiece();
+        if (collides(player)) endGame();
+      }
+
+      /** Returns true when a piece overlaps the board edge or a settled block. */
+      function collides(piece) {
+        return piece.matrix.some((row, y) => row.some((value, x) => {
+          if (!value) return false;
+          const boardX = piece.x + x;
+          const boardY = piece.y + y;
+          return boardX < 0 || boardX >= COLS || boardY >= ROWS || (boardY >= 0 && board[boardY][boardX]);
+        }));
+      }
+
+      /** Draws one matrix onto a canvas context at the supplied board position. */
+      function drawMatrix(targetContext, matrix, offsetX, offsetY, alpha = 1, size = BLOCK) {
+        targetContext.save();
+        targetContext.globalAlpha = alpha;
+        matrix.forEach((row, y) => row.forEach((value, x) => {
+          if (!value) return;
+          targetContext.fillStyle = COLOURS[value];
+          targetContext.fillRect((x + offsetX) * size, (y + offsetY) * size, size, size);
+          targetContext.strokeStyle = 'rgba(255,255,255,.28)';
+          targetContext.lineWidth = 2;
+          targetContext.strokeRect((x + offsetX) * size + 1, (y + offsetY) * size + 1, size - 2, size - 2);
+        }));
+        targetContext.restore();
+      }
+
+      /** Renders the settled board, ghost position and active piece. */
+      function drawGame() {
+        context.fillStyle = '#160b06';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.strokeStyle = 'rgba(255,255,255,.035)';
+        for (let x = 1; x < COLS; x += 1) {
+          context.beginPath(); context.moveTo(x * BLOCK, 0); context.lineTo(x * BLOCK, canvas.height); context.stroke();
+        }
+        for (let y = 1; y < ROWS; y += 1) {
+          context.beginPath(); context.moveTo(0, y * BLOCK); context.lineTo(canvas.width, y * BLOCK); context.stroke();
+        }
+        drawMatrix(context, board, 0, 0);
+        if (!player) return;
+        const ghost = { ...player, matrix: player.matrix };
+        while (!collides({ ...ghost, y: ghost.y + 1 })) ghost.y += 1;
+        drawMatrix(context, ghost.matrix, ghost.x, ghost.y, 0.2);
+        drawMatrix(context, player.matrix, player.x, player.y);
+      }
+
+      /** Renders the next queued piece in the preview canvas. */
+      function drawNextPiece() {
+        nextContext.fillStyle = 'rgba(0,0,0,.24)';
+        nextContext.fillRect(0, 0, 120, 90);
+        const size = 22;
+        const width = nextPiece.matrix[0].length * size;
+        const height = nextPiece.matrix.length * size;
+        drawMatrix(nextContext, nextPiece.matrix, (120 - width) / (2 * size), (90 - height) / (2 * size), 1, size);
+      }
+
+      /** Copies the active piece into the board and starts the next piece. */
+      function lockPiece() {
+        player.matrix.forEach((row, y) => row.forEach((value, x) => {
+          if (value && player.y + y >= 0) board[player.y + y][player.x + x] = value;
+        }));
+        clearLines();
+        spawnPiece();
+      }
+
+      /** Removes completed rows and updates the score, line count and level. */
+      function clearLines() {
+        let cleared = 0;
+        for (let y = ROWS - 1; y >= 0; y -= 1) {
+          if (board[y].every(Boolean)) {
+            board.splice(y, 1);
+            board.unshift(Array(COLS).fill(0));
+            cleared += 1;
+            y += 1;
+          }
+        }
+        if (cleared) {
+          lines += cleared;
+          score += LINE_POINTS[cleared] * level;
+          level = Math.floor(lines / 10) + 1;
+          updateStats();
+        }
+      }
+
+      /** Moves the active piece horizontally when the destination is valid. */
+      function movePiece(direction) {
+        if (!running || paused) return;
+        player.x += direction;
+        if (collides(player)) player.x -= direction;
+      }
+
+      /** Moves the active piece down once and locks it if it has landed. */
+      function dropPiece(manual = false) {
+        if (!running || paused) return;
+        player.y += 1;
+        if (collides(player)) {
+          player.y -= 1;
+          lockPiece();
+        } else if (manual) {
+          score += 1;
+          updateStats();
+        }
+        dropCounter = 0;
+      }
+
+      /** Drops the active piece immediately and awards points for the distance. */
+      function hardDrop() {
+        if (!running || paused) return;
+        let distance = 0;
+        while (!collides({ ...player, y: player.y + 1 })) {
+          player.y += 1;
+          distance += 1;
+        }
+        score += distance * 2;
+        updateStats();
+        lockPiece();
+      }
+
+      /** Rotates the active piece clockwise and nudges it away from walls if needed. */
+      function rotatePiece() {
+        if (!running || paused) return;
+        const originalMatrix = player.matrix;
+        const originalX = player.x;
+        player.matrix = player.matrix[0].map((_, index) => player.matrix.map((row) => row[index]).reverse());
+        for (const offset of [0, -1, 1, -2, 2]) {
+          player.x = originalX + offset;
+          if (!collides(player)) return;
+        }
+        player.x = originalX;
+        player.matrix = originalMatrix;
+      }
+
+      /** Refreshes the visible score, line and level values. */
+      function updateStats() {
+        document.querySelector('#score').textContent = score.toLocaleString();
+        document.querySelector('#lines').textContent = lines;
+        document.querySelector('#level').textContent = level;
+      }
+
+      /** Starts a fresh game and resets all board and scoring state. */
+      function startGame() {
+        board = createBoard();
+        bag = [];
+        player = null;
+        nextPiece = takePiece();
+        score = 0;
+        lines = 0;
+        level = 1;
+        running = true;
+        paused = false;
+        scoreSaved = false;
+        dropCounter = 0;
+        lastTime = performance.now();
+        updateStats();
+        spawnPiece();
+        document.querySelector('#gameOverlay').hidden = true;
+        document.querySelector('#pauseButton').textContent = 'Pause';
+        document.querySelector('#gameMessage').textContent = '';
+        requestAnimationFrame(updateGame);
+      }
+
+      /** Pauses or resumes the active game. */
+      function togglePause() {
+        if (!running) return;
+        paused = !paused;
+        document.querySelector('#pauseButton').textContent = paused ? 'Resume' : 'Pause';
+        document.querySelector('#gameMessage').textContent = paused ? 'Game paused' : '';
+        if (!paused) {
+          lastTime = performance.now();
+          requestAnimationFrame(updateGame);
+        }
+      }
+
+      /** Ends the current game, presents the result and saves it once. */
+      async function endGame() {
+        running = false;
+        const overlay = document.querySelector('#gameOverlay');
+        document.querySelector('#overlayTitle').textContent = 'Game over';
+        document.querySelector('#overlayText').textContent = `You scored ${score.toLocaleString()} points and cleared ${lines} lines.`;
+        document.querySelector('#startButton').textContent = 'Play again';
+        overlay.hidden = false;
+
+        if (score > 0 && !scoreSaved && currentUser) {
+          scoreSaved = true;
+          try {
+            await addDoc(collection(db, 'scores'), {
+              gameId: GAME_ID,
+              uid: currentUser.uid,
+              playerName: currentUser.displayName || 'Family player',
+              score,
+              lines,
+              level,
+              createdAt: serverTimestamp()
+            });
+            document.querySelector('#gameMessage').textContent = 'Your score was saved.';
+            await loadLeaderboard();
+          } catch (error) {
+            console.debug('The high score could not be saved', error);
+            document.querySelector('#gameMessage').textContent = 'Your score could not be saved.';
+          }
+        }
+      }
+
+      /** Advances the timed game loop and redraws the board. */
+      function updateGame(time = 0) {
+        if (!running || paused) return;
+        const delta = time - lastTime;
+        lastTime = time;
+        dropCounter += delta;
+        const interval = Math.max(110, 900 - ((level - 1) * 70));
+        if (dropCounter >= interval) dropPiece();
+        drawGame();
+        requestAnimationFrame(updateGame);
+      }
+
+      /** Loads, sorts and renders the ten best family scores for this game. */
+      async function loadLeaderboard() {
+        const snapshot = await getDocs(collection(db, 'scores'));
+        const scores = snapshot.docs
+          .map((document) => document.data())
+          .filter((entry) => entry.gameId === GAME_ID && Number.isFinite(entry.score))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10);
+
+        const list = document.querySelector('#leaderboard');
+        list.replaceChildren();
+        scores.forEach((entry, index) => {
+          const item = document.createElement('li');
+          const position = document.createElement('em');
+          const name = document.createElement('span');
+          const points = document.createElement('strong');
+          position.textContent = `${index + 1}.`;
+          name.textContent = entry.playerName || 'Family player';
+          points.textContent = Number(entry.score).toLocaleString();
+          item.append(position, name, points);
+          list.append(item);
+        });
+        document.querySelector('#emptyScores').hidden = scores.length !== 0;
+      }
+
+      /** Maps a named keyboard or touch action to the appropriate game movement. */
+      function runAction(action) {
+        if (action === 'left') movePiece(-1);
+        if (action === 'right') movePiece(1);
+        if (action === 'down') dropPiece(true);
+        if (action === 'rotate') rotatePiece();
+        if (action === 'drop') hardDrop();
+        drawGame();
+      }
+
+      document.querySelector('#startButton').addEventListener('click', startGame);
+      document.querySelector('#pauseButton').addEventListener('click', togglePause);
+      document.querySelectorAll('[data-action]').forEach((button) => {
+        button.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          runAction(button.dataset.action);
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        const actions = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'rotate', ' ': 'drop' };
+        if (actions[event.key]) {
+          event.preventDefault();
+          runAction(actions[event.key]);
+        } else if (event.key.toLowerCase() === 'p') {
+          togglePause();
+        }
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.replace('../../');
+          return;
+        }
+
+        currentUser = user;
+        try {
+          await loadLeaderboard();
+          document.querySelector('#accessMessage').hidden = true;
+          document.querySelector('#gameShell').hidden = false;
+          drawGame();
+        } catch (error) {
+          console.debug('Family game access was denied', error);
+          document.querySelector('#accessMessage').textContent = 'This Google account is not authorised to access family games.';
+        }
+      });
+    </script>
+  </body>
+</html>
