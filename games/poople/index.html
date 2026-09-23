@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Poople | My Haggis Games</title>
+    <meta name="theme-color" content="#2d1406" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      :root {
+        --bg: #2d1406;
+        --panel: rgba(60, 29, 13, 0.93);
+        --line: rgba(255, 211, 148, 0.22);
+        --gold: #f7b267;
+        --orange: #e9772d;
+        --cream: #fff5ea;
+        --muted: #f3d7a8;
+        --green: #5d9b61;
+        --brown: #8b4d27;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 18px;
+        color: var(--cream);
+        font-family: Arial, Helvetica, sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(247, 178, 103, 0.22), transparent 28%),
+          linear-gradient(145deg, #2d1406, #54250c);
+      }
+
+      button, input, a { font: inherit; }
+      [hidden] { display: none !important; }
+      .shell { width: min(920px, 100%); margin: 0 auto; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+      .back { color: var(--muted); text-decoration: none; font-weight: 800; }
+      .back:hover { color: var(--cream); }
+      h1 { margin: 2px 0 0; font-size: clamp(2rem, 7vw, 3.1rem); letter-spacing: -0.05em; }
+      .tagline { margin: 4px 0 0; color: var(--muted); }
+
+      .button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 17px;
+        cursor: pointer;
+        font-weight: 900;
+        color: #2d1406;
+        background: linear-gradient(135deg, var(--gold), var(--orange));
+      }
+      .button.secondary { color: var(--cream); border: 1px solid var(--line); background: rgba(255,255,255,.07); }
+      .button:disabled { cursor: not-allowed; opacity: .5; }
+      .button:focus-visible, input:focus-visible, .back:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+      .layout { display: grid; grid-template-columns: minmax(340px, 1.25fr) minmax(240px, .75fr); gap: 18px; align-items: start; }
+      .panel { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 18px 45px rgba(20,8,3,.28); }
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 17px; }
+      .stat { padding: 10px 7px; text-align: center; border-radius: 12px; background: rgba(255,255,255,.055); }
+      .stat small { display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+      .stat strong { display: block; margin-top: 3px; font-size: 1.25rem; }
+
+      .goal { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 15px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(247,178,103,.08); }
+      .goal span { color: var(--muted); font-size: .78rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+      .goal strong { font-size: 1.45rem; letter-spacing: .18em; }
+      .goal.reached { border-color: rgba(93,155,97,.8); background: rgba(93,155,97,.18); }
+
+      .route { display: grid; gap: 7px; max-height: 390px; min-height: 88px; padding: 6px 5px 6px 0; overflow-y: auto; }
+      .route-row { display: flex; align-items: center; gap: 10px; }
+      .route-label { width: 46px; flex: 0 0 46px; color: var(--muted); font-size: .72rem; font-weight: 800; text-align: right; text-transform: uppercase; }
+      .word-tiles { display: grid; grid-template-columns: repeat(4, 46px); gap: 5px; }
+      .letter { display: grid; place-items: center; width: 46px; height: 46px; border: 2px solid rgba(255,255,255,.18); border-radius: 8px; background: rgba(255,255,255,.055); font-size: 1.35rem; font-weight: 900; }
+      .letter.changed { border-color: var(--gold); background: rgba(247,178,103,.16); }
+      .route-row:last-child .letter { border-color: rgba(247,178,103,.48); }
+
+      .entry { display: grid; grid-template-columns: 1fr auto; gap: 9px; margin-top: 16px; }
+      .word-input { width: 100%; min-width: 0; height: 54px; padding: 0 16px; border: 2px solid var(--line); border-radius: 12px; color: var(--cream); background: rgba(255,255,255,.07); font-size: 1.45rem; font-weight: 900; letter-spacing: .2em; text-align: center; text-transform: uppercase; }
+      .entry-actions { display: flex; gap: 8px; margin-top: 9px; }
+      .message { min-height: 24px; margin-top: 12px; color: var(--muted); font-weight: 700; text-align: center; }
+      .message.error { color: #ffc0a0; }
+
+      .result { margin-top: 16px; padding: 17px; border: 1px solid var(--line); border-radius: 14px; text-align: center; background: rgba(255,255,255,.055); }
+      .result strong { display: block; font-size: 1.35rem; }
+      .result p { margin: 7px 0 14px; color: var(--muted); line-height: 1.5; }
+
+      h2 { margin: 0 0 13px; color: var(--muted); font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; }
+      .leaderboard { margin: 0; padding: 0; list-style: none; }
+      .leaderboard li { display: grid; grid-template-columns: 25px 1fr; gap: 4px 7px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .leaderboard li:last-child { border-bottom: 0; }
+      .leaderboard em { color: var(--muted); font-style: normal; }
+      .leader-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .leader-result { grid-column: 2; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+      .empty, .how { color: var(--muted); line-height: 1.55; }
+      .how { margin: 12px 0 0; font-size: .9rem; }
+      .example { margin-top: 14px; padding: 12px; border-radius: 11px; color: var(--muted); background: rgba(255,255,255,.045); font-size: .85rem; line-height: 1.55; }
+      .example strong { color: var(--cream); letter-spacing: .08em; }
+
+      @media (max-width: 740px) {
+        body { padding: 11px; }
+        .layout { grid-template-columns: 1fr; }
+        .game-panel { padding: 13px; }
+        .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      }
+      @media (max-width: 520px) {
+        .topbar { align-items: flex-start; }
+        .topbar .button { padding: 10px 12px; }
+        .side-panel { grid-template-columns: 1fr; }
+        .word-tiles { grid-template-columns: repeat(4, 42px); }
+        .letter { width: 42px; height: 42px; }
+        .entry { grid-template-columns: 1fr; }
+        .entry .button { width: 100%; }
+        .entry-actions .button { flex: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="gameShell" class="shell" hidden>
+      <header class="topbar">
+        <div>
+          <a class="back" href="../../">← Family games</a>
+          <h1>💩 Poople</h1>
+          <p class="tagline">One letter at a time. Destination: POOP.</p>
+        </div>
+        <button id="newPuzzleButton" class="button secondary" type="button">New puzzle</button>
+      </header>
+
+      <div class="layout">
+        <section class="panel game-panel">
+          <div class="stats" aria-label="Puzzle statistics">
+            <div class="stat"><small>Moves</small><strong id="moves">0</strong></div>
+            <div class="stat"><small>Par</small><strong id="par">–</strong></div>
+            <div class="stat"><small>Time</small><strong id="timer">0:00</strong></div>
+            <div class="stat"><small>Your best</small><strong id="personalBest">–</strong></div>
+          </div>
+
+          <div id="goal" class="goal"><span>Reach this word</span><strong>POOP</strong></div>
+          <div id="route" class="route" aria-label="Your word ladder"></div>
+
+          <div class="entry">
+            <label>
+              <span hidden>Next four-letter word</span>
+              <input id="wordInput" class="word-input" type="text" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Next four-letter word" />
+            </label>
+            <button id="submitButton" class="button" type="button">Add word</button>
+          </div>
+          <div class="entry-actions">
+            <button id="hintButton" class="button secondary" type="button">Give me a hint</button>
+          </div>
+          <div id="message" class="message" role="status" aria-live="polite">Change one letter to make another word.</div>
+
+          <div id="result" class="result" hidden>
+            <strong id="resultTitle"></strong>
+            <p id="resultText"></p>
+            <button id="playAgainButton" class="button" type="button">Play another</button>
+          </div>
+        </section>
+
+        <aside class="panel side-panel">
+          <section>
+            <h2>Family best</h2>
+            <ol id="leaderboard" class="leaderboard"></ol>
+            <div id="emptyScores" class="empty">No completed puzzles yet.</div>
+          </section>
+          <section>
+            <h2>How to play</h2>
+            <p class="how">Change exactly one letter on every move. Each new combination must be a valid four-letter word, and you cannot reuse a word.</p>
+            <p class="how">Par is the shortest possible route from your starting word to POOP. Fewer hints and fewer moves over par rank higher.</p>
+            <div class="example"><strong>Example</strong><br />BOOK → BOOT → BOOT is not allowed because the word did not change. Try BOOK → BOOM instead.</div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <section id="accessMessage" class="shell panel" aria-live="polite">Checking family access…</section>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+      import { addDoc, collection, getDocs, getFirestore, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
+      const firebaseConfig = {
+        apiKey: 'AIzaSyBC-jGU64gc-xBnAz3b9Ld8SZRcJCym4QE',
+        authDomain: 'myhaggis-games.firebaseapp.com',
+        projectId: 'myhaggis-games',
+        storageBucket: 'myhaggis-games.firebasestorage.app',
+        messagingSenderId: '914472191213',
+        appId: '1:914472191213:web:d2002ccca9855e5d9b38e4'
+      };
+
+      const GAME_ID = 'poople';
+      const TARGET_WORD = 'POOP';
+      const WORD_LIST_URL = './four-letter-words.txt?v=1';
+      const BLOCKED_STARTS = new Set(['COCK','CUNT','DICK','FUCK','NAZI','PISS','RAPE','SHIT','SLUT']);
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      let currentUser = null;
+      let orderedWords = [];
+      let validWords = new Set();
+      let wordRank = new Map();
+      let patternWords = new Map();
+      let distanceToTarget = new Map();
+      let startCandidates = [];
+      let startWord = '';
+      let currentWord = '';
+      let path = [];
+      let par = 0;
+      let hintsUsed = 0;
+      let hintShownFor = '';
+      let startedAt = null;
+      let timerInterval = null;
+      let gameOver = false;
+      let allScores = [];
+
+      /** Formats a duration in seconds as minutes and two-digit seconds. */
+      function formatDuration(seconds) {
+        const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+        return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+      }
+
+      /** Returns how many character positions differ between two four-letter words. */
+      function countDifferences(first, second) {
+        return [...first].reduce((count, letter, index) => count + (letter !== second[index] ? 1 : 0), 0);
+      }
+
+      /** Returns every valid word that differs from the supplied word by one letter. */
+      function getNeighbours(word) {
+        const neighbours = new Set();
+        for (let index = 0; index < word.length; index += 1) {
+          const pattern = `${word.slice(0, index)}*${word.slice(index + 1)}`;
+          (patternWords.get(pattern) || []).forEach((candidate) => {
+            if (candidate !== word) neighbours.add(candidate);
+          });
+        }
+        return [...neighbours];
+      }
+
+      /** Builds pattern buckets and shortest distances so every supplied puzzle is solvable. */
+      function prepareWordGraph(words) {
+        patternWords = new Map();
+        words.forEach((word) => {
+          for (let index = 0; index < word.length; index += 1) {
+            const pattern = `${word.slice(0, index)}*${word.slice(index + 1)}`;
+            if (!patternWords.has(pattern)) patternWords.set(pattern, []);
+            patternWords.get(pattern).push(word);
+          }
+        });
+
+        distanceToTarget = new Map([[TARGET_WORD, 0]]);
+        const queue = [TARGET_WORD];
+        for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+          const word = queue[queueIndex];
+          getNeighbours(word).forEach((neighbour) => {
+            if (distanceToTarget.has(neighbour)) return;
+            distanceToTarget.set(neighbour, distanceToTarget.get(word) + 1);
+            queue.push(neighbour);
+          });
+        }
+      }
+
+      /** Loads the bundled dictionary and prepares common starts five to seven moves from POOP. */
+      async function loadWordList() {
+        const response = await fetch(WORD_LIST_URL, { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Word list request failed with ${response.status}`);
+        orderedWords = [...new Set(
+          (await response.text())
+            .split(/\s+/)
+            .map((word) => word.trim().toUpperCase())
+            .filter((word) => /^[A-Z]{4}$/.test(word))
+        )];
+        validWords = new Set(orderedWords);
+        wordRank = new Map(orderedWords.map((word, index) => [word, index]));
+        if (!validWords.has(TARGET_WORD) || orderedWords.length < 5000) throw new Error('The four-letter word list is incomplete');
+        prepareWordGraph(orderedWords);
+        startCandidates = orderedWords.slice(0, 750).filter((word) => {
+          const distance = distanceToTarget.get(word);
+          return distance >= 5 && distance <= 7 && !BLOCKED_STARTS.has(word);
+        });
+        if (startCandidates.length < 100) throw new Error('Not enough suitable starting words were found');
+      }
+
+      /** Starts timing when the first valid move is made. */
+      function startTimer() {
+        if (startedAt !== null) return;
+        startedAt = performance.now();
+        timerInterval = window.setInterval(() => {
+          document.querySelector('#timer').textContent = formatDuration((performance.now() - startedAt) / 1000);
+        }, 1000);
+      }
+
+      /** Stops the timer and returns the completed duration in seconds. */
+      function stopTimer() {
+        if (timerInterval !== null) window.clearInterval(timerInterval);
+        timerInterval = null;
+        const seconds = startedAt === null ? 0 : Math.round((performance.now() - startedAt) / 1000);
+        document.querySelector('#timer').textContent = formatDuration(seconds);
+        return seconds;
+      }
+
+      /** Displays a status or validation message beneath the controls. */
+      function showMessage(message, isError = false) {
+        const element = document.querySelector('#message');
+        element.textContent = message;
+        element.classList.toggle('error', isError);
+      }
+
+      /** Draws the complete word ladder and highlights the changed letter on each move. */
+      function renderRoute() {
+        const route = document.querySelector('#route');
+        route.replaceChildren();
+        path.forEach((word, pathIndex) => {
+          const row = document.createElement('div');
+          row.className = 'route-row';
+          const label = document.createElement('span');
+          label.className = 'route-label';
+          label.textContent = pathIndex === 0 ? 'Start' : `${pathIndex}`;
+          const tiles = document.createElement('div');
+          tiles.className = 'word-tiles';
+          [...word].forEach((letter, letterIndex) => {
+            const tile = document.createElement('span');
+            tile.className = 'letter';
+            if (pathIndex > 0 && path[pathIndex - 1][letterIndex] !== letter) tile.classList.add('changed');
+            tile.textContent = letter;
+            tiles.append(tile);
+          });
+          row.append(label, tiles);
+          route.append(row);
+        });
+        route.scrollTop = route.scrollHeight;
+        document.querySelector('#moves').textContent = Math.max(0, path.length - 1);
+      }
+
+      /** Selects a random unused common start, resetting after the pool is exhausted. */
+      function chooseStartWord() {
+        const storageKey = `poopleUsedStarts:${currentUser.uid}`;
+        let used = [];
+        try { used = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch (error) { console.debug('Used Poople starts could not be read', error); }
+        let available = startCandidates.filter((word) => !used.includes(word));
+        if (!available.length) {
+          used = [];
+          available = [...startCandidates];
+        }
+        const selected = available[Math.floor(Math.random() * available.length)];
+        used.push(selected);
+        localStorage.setItem(storageKey, JSON.stringify(used));
+        return selected;
+      }
+
+      /** Resets every puzzle control and begins with another guaranteed-solvable word. */
+      function startPuzzle() {
+        if (timerInterval !== null) window.clearInterval(timerInterval);
+        startWord = chooseStartWord();
+        currentWord = startWord;
+        path = [startWord];
+        par = distanceToTarget.get(startWord);
+        hintsUsed = 0;
+        hintShownFor = '';
+        startedAt = null;
+        timerInterval = null;
+        gameOver = false;
+        document.querySelector('#par').textContent = par;
+        document.querySelector('#timer').textContent = '0:00';
+        document.querySelector('#wordInput').value = '';
+        document.querySelector('#wordInput').disabled = false;
+        document.querySelector('#submitButton').disabled = false;
+        document.querySelector('#hintButton').disabled = false;
+        document.querySelector('#goal').classList.remove('reached');
+        document.querySelector('#result').hidden = true;
+        renderRoute();
+        showMessage('Change one letter to make another word.');
+        document.querySelector('#wordInput').focus();
+      }
+
+      /** Places a shortest-route next word in the input and records one hint. */
+      function showHint() {
+        if (gameOver) return;
+        const currentDistance = distanceToTarget.get(currentWord);
+        const options = getNeighbours(currentWord)
+          .filter((word) => distanceToTarget.get(word) === currentDistance - 1 && !path.includes(word))
+          .sort((first, second) => (wordRank.get(first) ?? Infinity) - (wordRank.get(second) ?? Infinity));
+        if (!options.length) {
+          showMessage('No unused hint is available from here. Try stepping back towards an earlier word.', true);
+          return;
+        }
+        document.querySelector('#wordInput').value = options[0];
+        if (hintShownFor !== currentWord) {
+          hintsUsed += 1;
+          hintShownFor = currentWord;
+        }
+        showMessage(`Hint ${hintsUsed}: try ${options[0]}.`);
+      }
+
+      /** Validates and adds the next one-letter word to the ladder. */
+      async function submitWord() {
+        if (gameOver) return;
+        const input = document.querySelector('#wordInput');
+        const candidate = input.value.trim().toUpperCase();
+        if (candidate.length !== 4) {
+          showMessage('Enter a four-letter word.', true);
+          return;
+        }
+        if (!validWords.has(candidate)) {
+          showMessage('That word is not in the Poople dictionary.', true);
+          return;
+        }
+        if (countDifferences(currentWord, candidate) !== 1) {
+          showMessage(`Change exactly one letter from ${currentWord}.`, true);
+          return;
+        }
+        if (path.includes(candidate)) {
+          showMessage('You have already used that word in this ladder.', true);
+          return;
+        }
+
+        startTimer();
+        path.push(candidate);
+        currentWord = candidate;
+        hintShownFor = '';
+        input.value = '';
+        renderRoute();
+        if (candidate === TARGET_WORD) await finishPuzzle();
+        else showMessage(`${candidate} works. Keep heading towards POOP.`);
+      }
+
+      /** Saves a solved puzzle and refreshes the family leaderboard. */
+      async function finishPuzzle() {
+        gameOver = true;
+        const durationSeconds = stopTimer();
+        const moves = path.length - 1;
+        const movesOverPar = Math.max(0, moves - par);
+        const score = Math.max(0, 1000 - (movesOverPar * 100) - (hintsUsed * 75) - Math.min(durationSeconds, 300));
+        document.querySelector('#goal').classList.add('reached');
+        document.querySelector('#wordInput').disabled = true;
+        document.querySelector('#submitButton').disabled = true;
+        document.querySelector('#hintButton').disabled = true;
+        document.querySelector('#resultTitle').textContent = movesOverPar === 0 ? 'Perfect Poople!' : 'You reached POOP!';
+        document.querySelector('#resultText').textContent = `${moves} moves · par ${par} · ${formatDuration(durationSeconds)} · ${hintsUsed} ${hintsUsed === 1 ? 'hint' : 'hints'}`;
+        document.querySelector('#result').hidden = false;
+        showMessage(movesOverPar === 0 ? 'That was a shortest possible route.' : `${movesOverPar} ${movesOverPar === 1 ? 'move' : 'moves'} over par.`);
+
+        try {
+          await addDoc(collection(db, 'scores'), {
+            gameId: GAME_ID,
+            uid: currentUser.uid,
+            playerName: currentUser.displayName || 'Family player',
+            startWord,
+            targetWord: TARGET_WORD,
+            path: [...path],
+            moves,
+            par,
+            movesOverPar,
+            hintsUsed,
+            durationSeconds,
+            score,
+            createdAt: serverTimestamp()
+          });
+          await loadLeaderboard();
+        } catch (error) {
+          console.debug('The Poople result could not be saved', error);
+          showMessage('Solved, but the result could not be saved.', true);
+        }
+      }
+
+      /** Loads each family member's best completed puzzle and displays the standings. */
+      async function loadLeaderboard() {
+        const snapshot = await getDocs(collection(db, 'scores'));
+        allScores = snapshot.docs.map((document) => document.data()).filter((entry) => entry.gameId === GAME_ID);
+        const bestByPlayer = new Map();
+        allScores.forEach((entry) => {
+          const existing = bestByPlayer.get(entry.uid);
+          const comparison = [Number(entry.movesOverPar), Number(entry.hintsUsed), Number(entry.durationSeconds)];
+          const existingComparison = existing
+            ? [Number(existing.movesOverPar), Number(existing.hintsUsed), Number(existing.durationSeconds)]
+            : null;
+          if (!existing || comparison.some((value, index) => value < existingComparison[index] && comparison.slice(0, index).every((earlier, earlierIndex) => earlier === existingComparison[earlierIndex]))) {
+            bestByPlayer.set(entry.uid, entry);
+          }
+        });
+
+        const standings = [...bestByPlayer.values()].sort((first, second) =>
+          Number(first.movesOverPar) - Number(second.movesOverPar) ||
+          Number(first.hintsUsed) - Number(second.hintsUsed) ||
+          Number(first.durationSeconds) - Number(second.durationSeconds)
+        );
+        const leaderboard = document.querySelector('#leaderboard');
+        leaderboard.replaceChildren();
+        standings.forEach((entry, index) => {
+          const item = document.createElement('li');
+          const position = document.createElement('em');
+          const name = document.createElement('span');
+          const result = document.createElement('span');
+          position.textContent = `${index + 1}.`;
+          name.className = 'leader-name';
+          name.textContent = entry.playerName || 'Family player';
+          result.className = 'leader-result';
+          const relative = Number(entry.movesOverPar) === 0 ? 'par' : `+${entry.movesOverPar}`;
+          result.textContent = `${relative} · ${formatDuration(entry.durationSeconds)} · ${entry.hintsUsed || 0} hints · ${entry.startWord} → POOP`;
+          item.append(position, name, result);
+          leaderboard.append(item);
+        });
+        document.querySelector('#emptyScores').hidden = standings.length !== 0;
+
+        const ownBest = bestByPlayer.get(currentUser?.uid);
+        document.querySelector('#personalBest').textContent = ownBest
+          ? (Number(ownBest.movesOverPar) === 0 ? 'PAR' : `+${ownBest.movesOverPar}`)
+          : '–';
+      }
+
+      document.querySelector('#wordInput').addEventListener('input', (event) => {
+        event.target.value = event.target.value.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase();
+      });
+      document.querySelector('#wordInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitWord();
+        }
+      });
+      document.querySelector('#submitButton').addEventListener('click', submitWord);
+      document.querySelector('#hintButton').addEventListener('click', showHint);
+      document.querySelector('#playAgainButton').addEventListener('click', startPuzzle);
+      document.querySelector('#newPuzzleButton').addEventListener('click', () => {
+        if (!gameOver && path.length > 1 && !window.confirm('Abandon this ladder and start a new puzzle?')) return;
+        startPuzzle();
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.replace('../../');
+          return;
+        }
+        currentUser = user;
+        try {
+          await Promise.all([loadWordList(), loadLeaderboard()]);
+          startPuzzle();
+          document.querySelector('#accessMessage').hidden = true;
+          document.querySelector('#gameShell').hidden = false;
+        } catch (error) {
+          console.debug('Poople could not be opened', error);
+          document.querySelector('#accessMessage').textContent = 'Poople could not be loaded for this account.';
+        }
+      });
+    </script>
+  </body>
+</html>

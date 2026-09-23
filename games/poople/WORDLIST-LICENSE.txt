@@ -1,0 +1,12 @@
+Poople word list
+================
+
+four-letter-words.txt contains four-letter English words connected to POOP by
+one-letter changes. Common-word frequency is used only to prioritise friendly
+starting words; all included words can be used during a ladder.
+
+Word strings are derived from dwyl/english-words, released under the Unlicense:
+https://github.com/dwyl/english-words
+
+Common-word ordering uses Peter Norvig's published count_1w frequency data:
+https://www.norvig.com/ngrams/
