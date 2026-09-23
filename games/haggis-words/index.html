@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Haggis Words | My Haggis Games</title>
+    <meta name="theme-color" content="#2d1406" />
+    <style>
+      :root {
+        --bg: #2d1406;
+        --panel: rgba(60, 29, 13, 0.92);
+        --line: rgba(255, 211, 148, 0.22);
+        --gold: #f7b267;
+        --orange: #e9772d;
+        --cream: #fff5ea;
+        --muted: #f3d7a8;
+        --correct: #4f8a52;
+        --present: #c09132;
+        --absent: #5c514c;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 18px;
+        color: var(--cream);
+        font-family: Arial, Helvetica, sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(247, 178, 103, 0.22), transparent 28%),
+          linear-gradient(145deg, #2d1406, #54250c);
+        overscroll-behavior: none;
+      }
+
+      button, a { font: inherit; }
+      [hidden] { display: none !important; }
+      .shell { width: min(860px, 100%); margin: 0 auto; }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .back { color: var(--muted); text-decoration: none; font-weight: 700; }
+      .back:hover { color: var(--cream); }
+      h1 { margin: 2px 0 0; font-size: clamp(1.7rem, 6vw, 2.7rem); letter-spacing: -0.04em; }
+
+      .button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 17px;
+        cursor: pointer;
+        font-weight: 800;
+        color: #2d1406;
+        background: linear-gradient(135deg, var(--gold), var(--orange));
+      }
+
+      .button.secondary { color: var(--cream); border: 1px solid var(--line); background: rgba(255,255,255,.07); }
+      .button:focus-visible, .key:focus-visible, .back:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+      .layout { display: grid; grid-template-columns: minmax(320px, 1.4fr) minmax(220px, .7fr); gap: 18px; align-items: start; }
+
+      .panel {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        box-shadow: 0 18px 45px rgba(20, 8, 3, 0.28);
+      }
+
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+      .stat { padding: 10px 7px; text-align: center; border-radius: 12px; background: rgba(255,255,255,.055); }
+      .stat small { display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+      .stat strong { display: block; margin-top: 3px; font-size: 1.25rem; }
+
+      .board { display: grid; grid-template-rows: repeat(6, 1fr); gap: 6px; width: min(350px, 100%); margin: 0 auto 18px; }
+      .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+
+      .tile {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1;
+        border: 2px solid rgba(255,255,255,.19);
+        border-radius: 7px;
+        color: var(--cream);
+        font-size: clamp(1.55rem, 7vw, 2.15rem);
+        font-weight: 900;
+        text-transform: uppercase;
+        user-select: none;
+      }
+
+      .tile.filled { border-color: rgba(255,255,255,.5); animation: pop .1s ease; }
+      .tile.correct { background: var(--correct); border-color: var(--correct); }
+      .tile.present { background: var(--present); border-color: var(--present); }
+      .tile.absent { background: var(--absent); border-color: var(--absent); }
+      .row.shake { animation: shake .35s ease; }
+
+      .message { min-height: 28px; margin: 0 0 12px; text-align: center; color: var(--muted); font-weight: 700; }
+
+      .keyboard { display: grid; gap: 7px; margin: 0 auto; max-width: 560px; }
+      .key-row { display: flex; justify-content: center; gap: 5px; }
+      .key {
+        flex: 1 1 0;
+        min-width: 0;
+        height: 52px;
+        padding: 0 3px;
+        border: 0;
+        border-radius: 7px;
+        color: #2d1406;
+        background: #e9d5bb;
+        font-size: clamp(.76rem, 2.8vw, 1rem);
+        font-weight: 900;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .key.wide { flex: 1.55 1 0; font-size: .72rem; }
+      .key.correct { color: #fff; background: var(--correct); }
+      .key.present { color: #fff; background: var(--present); }
+      .key.absent { color: #fff; background: var(--absent); }
+      .key:active { transform: translateY(1px); }
+
+      h2 { margin: 0 0 13px; color: var(--muted); font-size: .95rem; text-transform: uppercase; letter-spacing: .08em; }
+      .leaderboard { margin: 0; padding: 0; list-style: none; }
+      .leaderboard li { display: grid; grid-template-columns: 25px 1fr auto; gap: 7px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .leaderboard li:last-child { border-bottom: 0; }
+      .leaderboard span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .leaderboard em { color: var(--muted); font-style: normal; }
+      .empty, .how { color: var(--muted); line-height: 1.55; }
+      .how { margin: 18px 0 0; font-size: .9rem; }
+
+      .result {
+        margin-top: 18px;
+        padding: 18px;
+        text-align: center;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255,255,255,.055);
+      }
+      .result strong { display: block; font-size: 1.4rem; }
+      .result p { margin: 7px 0 14px; color: var(--muted); line-height: 1.45; }
+
+      @keyframes pop { 50% { transform: scale(1.08); } }
+      @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+      @media (max-width: 720px) {
+        body { padding: 11px; }
+        .layout { grid-template-columns: 1fr; }
+        .game-panel { padding: 13px; }
+        .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      }
+
+      @media (max-width: 480px) {
+        .topbar { align-items: flex-start; }
+        .topbar .button { padding: 10px 12px; }
+        .side-panel { grid-template-columns: 1fr; }
+        .tile { border-radius: 5px; }
+        .keyboard { gap: 5px; }
+        .key-row { gap: 3px; }
+        .key { height: 48px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="gameShell" class="shell" hidden>
+      <header class="topbar">
+        <div>
+          <a class="back" href="../../">← Family games</a>
+          <h1>Haggis Words</h1>
+        </div>
+        <button id="newWordButton" class="button secondary" type="button">New word</button>
+      </header>
+
+      <div class="layout">
+        <section class="panel game-panel">
+          <div class="stats" aria-label="Your statistics">
+            <div class="stat"><small>Played</small><strong id="played">0</strong></div>
+            <div class="stat"><small>Won</small><strong id="won">0</strong></div>
+            <div class="stat"><small>Streak</small><strong id="streak">0</strong></div>
+          </div>
+
+          <div id="message" class="message" role="status" aria-live="polite">Guess the five-letter word</div>
+          <div id="board" class="board" aria-label="Word guessing board"></div>
+
+          <div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
+
+          <div id="result" class="result" hidden>
+            <strong id="resultTitle"></strong>
+            <p id="resultText"></p>
+            <button id="nextWordButton" class="button" type="button">Play another word</button>
+          </div>
+        </section>
+
+        <aside class="panel side-panel">
+          <div>
+            <h2>Family streaks</h2>
+            <ol id="leaderboard" class="leaderboard"></ol>
+            <div id="emptyScores" class="empty">No completed words yet.</div>
+          </div>
+          <div>
+            <h2>How to play</h2>
+            <p class="how">Green means the right letter in the right position. Gold means the letter is elsewhere in the word. Grey means it is not in the word.</p>
+            <p class="how">You have six attempts. When a round ends, keep playing with another randomly selected word.</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <section id="accessMessage" class="shell panel" aria-live="polite">Checking family access…</section>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+      import { addDoc, collection, getDocs, getFirestore, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
+      const firebaseConfig = {
+        apiKey: 'AIzaSyBC-jGU64gc-xBnAz3b9Ld8SZRcJCym4QE',
+        authDomain: 'myhaggis-games.firebaseapp.com',
+        projectId: 'myhaggis-games',
+        storageBucket: 'myhaggis-games.firebasestorage.app',
+        messagingSenderId: '914472191213',
+        appId: '1:914472191213:web:d2002ccca9855e5d9b38e4'
+      };
+
+      const GAME_ID = 'haggis-words';
+      const MAX_GUESSES = 6;
+      const WORD_LENGTH = 5;
+      const ANSWERS = [
+        'APPLE','BEACH','BLEND','BLOOM','BRAVE','BREAD','BRICK','BRUSH','CABLE','CHARM',
+        'CHEER','CHEST','CLOUD','COAST','CRANE','CREAM','DANCE','DREAM','DRINK','EARTH',
+        'FLAME','FLOUR','FOCUS','FRAME','FRESH','FRUIT','GIANT','GLASS','GRACE','GRAPE',
+        'GREEN','HAPPY','HEART','HONEY','HOUSE','JUICE','LIGHT','MAGIC','MAPLE','METAL',
+        'MIGHT','MOUSE','MUSIC','NIGHT','OCEAN','PAINT','PANEL','PEACH','PIANO','PLANT',
+        'PLATE','POINT','PRIDE','QUEST','QUICK','QUIET','RIVER','ROBIN','ROUND','SHARE',
+        'SHINE','SHORE','SMILE','SOLID','SOUND','SPARK','SPICE','SPORT','STONE','STORM',
+        'STORY','SUGAR','TABLE','TIGER','TOAST','TRAIN','TREAT','WATER','WHEAT','WORLD'
+      ];
+      const EXTRA_GUESSES = [
+        'ABOUT','ABOVE','ACTOR','ACUTE','ADORE','AFTER','AGAIN','AGENT','AGILE','AGREE',
+        'ALBUM','ALERT','ALIEN','ALIGN','ALIVE','ALLOW','ALONE','ALONG','AMBER','ANGEL',
+        'ANGER','ANGLE','APART','ARGUE','ARISE','ARROW','AUDIO','AVOID','AWAKE','AWARD',
+        'BADGE','BASIC','BATCH','BATON','BEGAN','BEGIN','BEING','BELOW','BENCH','BERRY',
+        'BLACK','BLADE','BLAME','BLANK','BLAST','BLIND','BLOCK','BOARD','BOOST','BOUND',
+        'BRAIN','BRAND','BREAK','BRING','BROAD','BROWN','BUILD','BURST','BUYER','CARRY',
+        'CATCH','CAUSE','CHAIN','CHAIR','CHART','CHASE','CHEAP','CHECK','CHILD','CHOIR',
+        'CLAIM','CLEAN','CLEAR','CLERK','CLICK','CLIMB','CLOCK','CLOSE','COACH','COULD',
+        'COUNT','COURT','COVER','CRAFT','CRASH','CRISP','CROSS','CROWD','CROWN','DAILY',
+        'DEALT','DEATH','DELAY','DEPTH','DIARY','DIRTY','DOUBT','DOZEN','DRAFT','DRAMA',
+        'DRAWN','DRESS','DRIVE','EAGER','EARLY','EIGHT','EMPTY','ENJOY','ENTRY','EQUAL',
+        'ERROR','EVENT','EVERY','EXACT','EXTRA','FAITH','FALSE','FAULT','FERRY','FIELD',
+        'FINAL','FIRST','FLASH','FLOOR','FLUID','FORCE','FOUND','FRONT','FUNNY','GIVEN',
+        'GLOBE','GLORY','GOING','GRAND','GRANT','GRASS','GREAT','GROUP','GUARD','GUESS',
+        'GUEST','GUIDE','HABIT','HEAVY','HORSE','HOTEL','HUMAN','IDEAL','IMAGE','INDEX',
+        'INNER','ISSUE','JOINT','JUDGE','KNOWN','LABEL','LARGE','LATER','LAUGH','LAYER',
+        'LEARN','LEAST','LEAVE','LEGAL','LEMON','LEVEL','LOCAL','LOGIC','LOOSE','LUCKY',
+        'LUNCH','MAJOR','MAKER','MARCH','MATCH','MAYBE','MONEY','MONTH','MOTOR','MOUNT',
+        'MOVIE','NEEDS','NEVER','NORTH','NOVEL','NURSE','OFFER','OFTEN','ORDER','OTHER',
+        'OWNER','PAPER','PARTY','PASTA','PEACE','PHONE','PHOTO','PIECE','PILOT','PITCH',
+        'PLACE','PLAIN','PLANE','POWER','PRESS','PRICE','PRIME','PRINT','PRIZE','PROUD',
+        'QUEEN','RADIO','RAISE','RANGE','REACH','READY','RIGHT','ROUGH','ROUTE','ROYAL',
+        'SCALE','SCENE','SCOPE','SCORE','SENSE','SERVE','SEVEN','SHAPE','SHIFT','SHIRT',
+        'SHORT','SIXTH','SKILL','SLEEP','SMALL','SMART','SPACE','SPEED','SPEND','STAFF',
+        'STAGE','STAND','START','STATE','STEAM','STEEL','STICK','STILL','STOCK','STYLE',
+        'SWEET','TEACH','THANK','THEIR','THEME','THERE','THING','THINK','THREE','THROW',
+        'TITLE','TODAY','TOPIC','TOTAL','TOUCH','TOWER','TRACK','TRADE','TRIAL','TRUCK',
+        'TRUST','TRUTH','UNDER','UNION','VALUE','VIDEO','VISIT','VOICE','WATCH','WHITE',
+        'WHOLE','WOMAN','WORDS','WORTH','WRITE','WRONG','YOUNG'
+      ];
+      const VALID_WORDS = new Set([...ANSWERS, ...EXTRA_GUESSES]);
+      const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', ['ENTER','Z','X','C','V','B','N','M','⌫']];
+      const STATUS_PRIORITY = { absent: 1, present: 2, correct: 3 };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      let currentUser = null;
+      let answer = '';
+      let currentGuess = '';
+      let guesses = [];
+      let gameOver = false;
+      let keyStatuses = {};
+      let stats = { played: 0, won: 0, streak: 0, bestStreak: 0 };
+
+      /** Loads the signed-in family member's local statistics with safe defaults. */
+      function loadStats(uid) {
+        try {
+          return { played: 0, won: 0, streak: 0, bestStreak: 0, ...JSON.parse(localStorage.getItem(`haggisWordsStats:${uid}`) || '{}') };
+        } catch (error) {
+          console.debug('Saved word statistics could not be read', error);
+          return { played: 0, won: 0, streak: 0, bestStreak: 0 };
+        }
+      }
+
+      /** Saves the current browser statistics and refreshes the summary. */
+      function saveStats() {
+        localStorage.setItem(`haggisWordsStats:${currentUser.uid}`, JSON.stringify(stats));
+        document.querySelector('#played').textContent = stats.played;
+        document.querySelector('#won').textContent = stats.won;
+        document.querySelector('#streak').textContent = stats.streak;
+      }
+
+      /** Selects a random answer without repeating until the full list is exhausted. */
+      function chooseAnswer() {
+        let used = [];
+        const usedWordsKey = `haggisWordsUsed:${currentUser.uid}`;
+        try { used = JSON.parse(localStorage.getItem(usedWordsKey) || '[]'); } catch (error) { console.debug('Used words could not be read', error); }
+        let available = ANSWERS.filter((word) => !used.includes(word));
+        if (!available.length) {
+          used = [];
+          available = [...ANSWERS];
+        }
+        const selected = available[Math.floor(Math.random() * available.length)];
+        used.push(selected);
+        localStorage.setItem(usedWordsKey, JSON.stringify(used));
+        return selected;
+      }
+
+      /** Creates the six-row game board and its thirty letter tiles. */
+      function buildBoard() {
+        const board = document.querySelector('#board');
+        board.replaceChildren();
+        for (let rowIndex = 0; rowIndex < MAX_GUESSES; rowIndex += 1) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.dataset.row = rowIndex;
+          for (let columnIndex = 0; columnIndex < WORD_LENGTH; columnIndex += 1) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.column = columnIndex;
+            row.append(tile);
+          }
+          board.append(row);
+        }
+      }
+
+      /** Creates the accessible on-screen keyboard for mouse and touch input. */
+      function buildKeyboard() {
+        const keyboard = document.querySelector('#keyboard');
+        keyboard.replaceChildren();
+        KEY_ROWS.forEach((keys) => {
+          const row = document.createElement('div');
+          row.className = 'key-row';
+          [...keys].forEach((letter) => {
+            const key = document.createElement('button');
+            key.type = 'button';
+            key.className = `key${letter === 'ENTER' || letter === '⌫' ? ' wide' : ''}`;
+            key.dataset.key = letter;
+            key.textContent = letter;
+            key.setAttribute('aria-label', letter === '⌫' ? 'Delete letter' : letter);
+            key.addEventListener('click', () => handleKey(letter));
+            row.append(key);
+          });
+          keyboard.append(row);
+        });
+      }
+
+      /** Begins another independent word round while retaining player statistics. */
+      function startRound() {
+        answer = chooseAnswer();
+        currentGuess = '';
+        guesses = [];
+        gameOver = false;
+        keyStatuses = {};
+        buildBoard();
+        buildKeyboard();
+        document.querySelector('#message').textContent = 'Guess the five-letter word';
+        document.querySelector('#result').hidden = true;
+      }
+
+      /** Refreshes the current row with the letters typed so far. */
+      function renderCurrentGuess() {
+        const row = document.querySelector(`[data-row="${guesses.length}"]`);
+        if (!row) return;
+        [...row.children].forEach((tile, index) => {
+          tile.textContent = currentGuess[index] || '';
+          tile.classList.toggle('filled', Boolean(currentGuess[index]));
+        });
+      }
+
+      /** Scores a guess accurately when the answer or guess contains repeated letters. */
+      function evaluateGuess(guess) {
+        const result = Array(WORD_LENGTH).fill('absent');
+        const remaining = {};
+        [...answer].forEach((letter, index) => {
+          if (guess[index] === letter) result[index] = 'correct';
+          else remaining[letter] = (remaining[letter] || 0) + 1;
+        });
+        [...guess].forEach((letter, index) => {
+          if (result[index] === 'correct') return;
+          if (remaining[letter] > 0) {
+            result[index] = 'present';
+            remaining[letter] -= 1;
+          }
+        });
+        return result;
+      }
+
+      /** Applies the evaluated colours to the submitted row and keyboard. */
+      function revealGuess(guess, result) {
+        const row = document.querySelector(`[data-row="${guesses.length - 1}"]`);
+        [...row.children].forEach((tile, index) => {
+          tile.classList.remove('filled');
+          tile.classList.add(result[index]);
+          const letter = guess[index];
+          if (!keyStatuses[letter] || STATUS_PRIORITY[result[index]] > STATUS_PRIORITY[keyStatuses[letter]]) {
+            keyStatuses[letter] = result[index];
+          }
+        });
+        document.querySelectorAll('.key[data-key]').forEach((key) => {
+          const status = keyStatuses[key.dataset.key];
+          if (status) key.classList.add(status);
+        });
+      }
+
+      /** Briefly shakes the current row to explain an invalid submission. */
+      function rejectGuess(message) {
+        const row = document.querySelector(`[data-row="${guesses.length}"]`);
+        document.querySelector('#message').textContent = message;
+        row?.classList.add('shake');
+        window.setTimeout(() => row?.classList.remove('shake'), 400);
+      }
+
+      /** Submits a complete valid guess and finishes or advances the round. */
+      async function submitGuess() {
+        if (currentGuess.length !== WORD_LENGTH) {
+          rejectGuess('Enter five letters');
+          return;
+        }
+        if (!VALID_WORDS.has(currentGuess)) {
+          rejectGuess('That word is not in this game’s list');
+          return;
+        }
+        const submitted = currentGuess;
+        const result = evaluateGuess(submitted);
+        guesses.push(submitted);
+        currentGuess = '';
+        revealGuess(submitted, result);
+        if (submitted === answer) await finishRound(true);
+        else if (guesses.length >= MAX_GUESSES) await finishRound(false);
+        else document.querySelector('#message').textContent = `${MAX_GUESSES - guesses.length} attempts remaining`;
+      }
+
+      /** Completes a round, updates statistics and records the result in Firestore. */
+      async function finishRound(didWin) {
+        gameOver = true;
+        stats.played += 1;
+        if (didWin) {
+          stats.won += 1;
+          stats.streak += 1;
+          stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+        } else {
+          stats.streak = 0;
+        }
+        saveStats();
+        document.querySelector('#message').textContent = didWin ? 'Lovely!' : `The word was ${answer}`;
+        document.querySelector('#resultTitle').textContent = didWin ? `Solved in ${guesses.length}!` : 'Not this time';
+        document.querySelector('#resultText').textContent = didWin
+          ? `Your current streak is ${stats.streak}.`
+          : `The word was ${answer}. Start another whenever you’re ready.`;
+        document.querySelector('#result').hidden = false;
+
+        try {
+          await addDoc(collection(db, 'scores'), {
+            gameId: GAME_ID,
+            uid: currentUser.uid,
+            playerName: currentUser.displayName || 'Family player',
+            won: didWin,
+            attempts: guesses.length,
+            streak: stats.streak,
+            bestStreak: stats.bestStreak,
+            score: didWin ? (700 - (guesses.length * 100)) + (stats.streak * 25) : 0,
+            createdAt: serverTimestamp()
+          });
+          await loadLeaderboard();
+        } catch (error) {
+          console.debug('The word result could not be saved', error);
+          document.querySelector('#message').textContent += ' · Result not saved';
+        }
+      }
+
+      /** Handles a letter, delete or enter action from either keyboard. */
+      function handleKey(key) {
+        if (gameOver) return;
+        if (key === 'ENTER') {
+          submitGuess();
+        } else if (key === '⌫' || key === 'BACKSPACE') {
+          currentGuess = currentGuess.slice(0, -1);
+          renderCurrentGuess();
+        } else if (/^[A-Z]$/.test(key) && currentGuess.length < WORD_LENGTH) {
+          currentGuess += key;
+          renderCurrentGuess();
+        }
+      }
+
+      /** Loads results and displays each family member's best recorded streak. */
+      async function loadLeaderboard() {
+        const snapshot = await getDocs(collection(db, 'scores'));
+        const players = new Map();
+        snapshot.docs.map((document) => document.data())
+          .filter((entry) => entry.gameId === GAME_ID)
+          .forEach((entry) => {
+            const existing = players.get(entry.uid) || { name: entry.playerName || 'Family player', streak: 0, wins: 0 };
+            existing.streak = Math.max(existing.streak, Number(entry.bestStreak || entry.streak || 0));
+            if (entry.won) existing.wins += 1;
+            players.set(entry.uid, existing);
+          });
+        const standings = [...players.values()].sort((a, b) => b.streak - a.streak || b.wins - a.wins);
+        const list = document.querySelector('#leaderboard');
+        list.replaceChildren();
+        standings.forEach((entry, index) => {
+          const item = document.createElement('li');
+          const position = document.createElement('em');
+          const name = document.createElement('span');
+          const streak = document.createElement('strong');
+          position.textContent = `${index + 1}.`;
+          name.textContent = entry.name;
+          streak.textContent = `${entry.streak} 🔥`;
+          item.append(position, name, streak);
+          list.append(item);
+        });
+        document.querySelector('#emptyScores').hidden = standings.length !== 0;
+      }
+
+      document.querySelector('#newWordButton').addEventListener('click', () => {
+        if (!gameOver && guesses.length && !window.confirm('Abandon this word and start another?')) return;
+        startRound();
+      });
+      document.querySelector('#nextWordButton').addEventListener('click', startRound);
+      document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        const key = event.key.toUpperCase();
+        if (/^[A-Z]$/.test(key) || key === 'ENTER' || key === 'BACKSPACE') {
+          event.preventDefault();
+          handleKey(key);
+        }
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.replace('../../');
+          return;
+        }
+        currentUser = user;
+        try {
+          stats = loadStats(user.uid);
+          await loadLeaderboard();
+          saveStats();
+          startRound();
+          document.querySelector('#accessMessage').hidden = true;
+          document.querySelector('#gameShell').hidden = false;
+        } catch (error) {
+          console.debug('Family game access was denied', error);
+          document.querySelector('#accessMessage').textContent = 'This Google account is not authorised to access family games.';
+        }
+      });
+    </script>
+  </body>
+</html>
