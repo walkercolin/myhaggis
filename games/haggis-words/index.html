@@ -73,7 +73,7 @@
         box-shadow: 0 18px 45px rgba(20, 8, 3, 0.28);
       }
 
-      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
       .stat { padding: 10px 7px; text-align: center; border-radius: 12px; background: rgba(255,255,255,.055); }
       .stat small { display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
       .stat strong { display: block; margin-top: 3px; font-size: 1.25rem; }
@@ -127,12 +127,23 @@
 
       h2 { margin: 0 0 13px; color: var(--muted); font-size: .95rem; text-transform: uppercase; letter-spacing: .08em; }
       .leaderboard { margin: 0; padding: 0; list-style: none; }
-      .leaderboard li { display: grid; grid-template-columns: 25px 1fr auto; gap: 7px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .leaderboard li { display: grid; grid-template-columns: 25px 1fr; gap: 5px 7px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
       .leaderboard li:last-child { border-bottom: 0; }
       .leaderboard span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       .leaderboard em { color: var(--muted); font-style: normal; }
+      .leader-metrics { grid-column: 2; color: var(--muted); font-size: .8rem; line-height: 1.4; }
       .empty, .how { color: var(--muted); line-height: 1.55; }
       .how { margin: 18px 0 0; font-size: .9rem; }
+
+      .word-summary { color: var(--muted); font-size: .9rem; line-height: 1.55; }
+      .word-history { display: grid; gap: 10px; margin-top: 13px; }
+      .attempt-card { padding: 11px; border-radius: 11px; background: rgba(255,255,255,.055); }
+      .attempt-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 7px; font-size: .84rem; }
+      .attempt-heading span { color: var(--muted); }
+      .guess-line { display: flex; gap: 3px; margin-top: 3px; }
+      .mini-tile { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 3px; color: #fff; background: var(--absent); font-size: .68rem; font-weight: 900; }
+      .mini-tile.correct { background: var(--correct); }
+      .mini-tile.present { background: var(--present); }
 
       .result {
         margin-top: 18px;
@@ -182,6 +193,7 @@
             <div class="stat"><small>Played</small><strong id="played">0</strong></div>
             <div class="stat"><small>Won</small><strong id="won">0</strong></div>
             <div class="stat"><small>Streak</small><strong id="streak">0</strong></div>
+            <div class="stat"><small>Time</small><strong id="timer">0:00</strong></div>
           </div>
 
           <div id="message" class="message" role="status" aria-live="polite">Guess the five-letter word</div>
@@ -197,6 +209,11 @@
         </section>
 
         <aside class="panel side-panel">
+          <div>
+            <h2>This word</h2>
+            <div id="wordSummary" class="word-summary">No previous family results for this word.</div>
+            <div id="wordHistory" class="word-history" hidden></div>
+          </div>
           <div>
             <h2>Family streaks</h2>
             <ol id="leaderboard" class="leaderboard"></ol>
@@ -285,6 +302,38 @@
       let gameOver = false;
       let keyStatuses = {};
       let stats = { played: 0, won: 0, streak: 0, bestStreak: 0 };
+      let roundStartedAt = null;
+      let timerInterval = null;
+      let allWordResults = [];
+
+      /** Formats a duration in seconds as minutes and two-digit seconds. */
+      function formatDuration(seconds) {
+        const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+        return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+      }
+
+      /** Refreshes the visible timer using time elapsed since the first submitted guess. */
+      function updateTimer() {
+        const elapsed = roundStartedAt === null ? 0 : (performance.now() - roundStartedAt) / 1000;
+        document.querySelector('#timer').textContent = formatDuration(elapsed);
+      }
+
+      /** Starts timing immediately after the first valid guess is submitted. */
+      function startTimer() {
+        if (roundStartedAt !== null) return;
+        roundStartedAt = performance.now();
+        updateTimer();
+        timerInterval = window.setInterval(updateTimer, 1000);
+      }
+
+      /** Stops the timer and returns the completed round duration in seconds. */
+      function stopTimer() {
+        if (timerInterval !== null) window.clearInterval(timerInterval);
+        timerInterval = null;
+        const duration = roundStartedAt === null ? 0 : Math.max(0, Math.round((performance.now() - roundStartedAt) / 1000));
+        document.querySelector('#timer').textContent = formatDuration(duration);
+        return duration;
+      }
 
       /** Loads the signed-in family member's local statistics with safe defaults. */
       function loadStats(uid) {
@@ -361,15 +410,20 @@
 
       /** Begins another independent word round while retaining player statistics. */
       function startRound() {
+        if (timerInterval !== null) window.clearInterval(timerInterval);
         answer = chooseAnswer();
         currentGuess = '';
         guesses = [];
         gameOver = false;
         keyStatuses = {};
+        roundStartedAt = null;
+        timerInterval = null;
         buildBoard();
         buildKeyboard();
+        updateTimer();
         document.querySelector('#message').textContent = 'Guess the five-letter word';
         document.querySelector('#result').hidden = true;
+        renderWordComparison(false);
       }
 
       /** Refreshes the current row with the letters typed so far. */
@@ -435,6 +489,7 @@
           rejectGuess('That word is not in this game’s list');
           return;
         }
+        startTimer();
         const submitted = currentGuess;
         const result = evaluateGuess(submitted);
         guesses.push(submitted);
@@ -448,6 +503,7 @@
       /** Completes a round, updates statistics and records the result in Firestore. */
       async function finishRound(didWin) {
         gameOver = true;
+        const durationSeconds = stopTimer();
         stats.played += 1;
         if (didWin) {
           stats.won += 1;
@@ -471,15 +527,20 @@
             playerName: currentUser.displayName || 'Family player',
             won: didWin,
             attempts: guesses.length,
+            word: answer,
+            guesses: [...guesses],
+            durationSeconds,
             streak: stats.streak,
             bestStreak: stats.bestStreak,
             score: didWin ? (700 - (guesses.length * 100)) + (stats.streak * 25) : 0,
             createdAt: serverTimestamp()
           });
           await loadLeaderboard();
+          renderWordComparison(true);
         } catch (error) {
           console.debug('The word result could not be saved', error);
           document.querySelector('#message').textContent += ' · Result not saved';
+          renderWordComparison(true);
         }
       }
 
@@ -497,16 +558,90 @@
         }
       }
 
-      /** Loads results and displays each family member's best recorded streak. */
+      /** Shows spoiler-free word statistics, then exact family guesses after completion. */
+      function renderWordComparison(revealGuesses) {
+        const wordResults = allWordResults.filter((entry) => entry.word === answer);
+        const wins = wordResults.filter((entry) => entry.won && Number.isFinite(Number(entry.attempts)));
+        const timedWins = wins.filter((entry) => Number.isFinite(Number(entry.durationSeconds)));
+        const averageGuesses = wins.length
+          ? (wins.reduce((total, entry) => total + Number(entry.attempts), 0) / wins.length).toFixed(1)
+          : '–';
+        const averageTime = timedWins.length
+          ? formatDuration(timedWins.reduce((total, entry) => total + Number(entry.durationSeconds), 0) / timedWins.length)
+          : '–';
+
+        const summary = document.querySelector('#wordSummary');
+        summary.textContent = wordResults.length
+          ? `${wordResults.length} family ${wordResults.length === 1 ? 'attempt' : 'attempts'} · ${wins.length} solved · ${averageGuesses} average guesses · ${averageTime} average time`
+          : 'No previous family results for this word.';
+
+        const history = document.querySelector('#wordHistory');
+        history.replaceChildren();
+        history.hidden = !revealGuesses || wordResults.length === 0;
+        if (!revealGuesses) return;
+
+        wordResults.forEach((entry) => {
+          const card = document.createElement('div');
+          card.className = 'attempt-card';
+          const heading = document.createElement('div');
+          heading.className = 'attempt-heading';
+          const name = document.createElement('strong');
+          const outcome = document.createElement('span');
+          name.textContent = entry.playerName || 'Family player';
+          outcome.textContent = entry.won
+            ? `${entry.attempts} guesses · ${formatDuration(entry.durationSeconds)}`
+            : 'Not solved';
+          heading.append(name, outcome);
+          card.append(heading);
+
+          if (Array.isArray(entry.guesses)) {
+            entry.guesses.forEach((guess) => {
+              if (typeof guess !== 'string' || guess.length !== WORD_LENGTH) return;
+              const line = document.createElement('div');
+              line.className = 'guess-line';
+              const result = evaluateGuess(guess);
+              [...guess].forEach((letter, index) => {
+                const tile = document.createElement('span');
+                tile.className = `mini-tile ${result[index]}`;
+                tile.textContent = letter;
+                line.append(tile);
+              });
+              card.append(line);
+            });
+          }
+          history.append(card);
+        });
+      }
+
+      /** Loads results and displays streak, average guesses and average solving time. */
       async function loadLeaderboard() {
         const snapshot = await getDocs(collection(db, 'scores'));
         const players = new Map();
-        snapshot.docs.map((document) => document.data())
-          .filter((entry) => entry.gameId === GAME_ID)
+        allWordResults = snapshot.docs.map((document) => document.data())
+          .filter((entry) => entry.gameId === GAME_ID);
+        allWordResults
           .forEach((entry) => {
-            const existing = players.get(entry.uid) || { name: entry.playerName || 'Family player', streak: 0, wins: 0 };
+            const existing = players.get(entry.uid) || {
+              name: entry.playerName || 'Family player',
+              streak: 0,
+              wins: 0,
+              guessTotal: 0,
+              guessCount: 0,
+              timeTotal: 0,
+              timeCount: 0
+            };
             existing.streak = Math.max(existing.streak, Number(entry.bestStreak || entry.streak || 0));
-            if (entry.won) existing.wins += 1;
+            if (entry.won) {
+              existing.wins += 1;
+              if (Number.isFinite(Number(entry.attempts))) {
+                existing.guessTotal += Number(entry.attempts);
+                existing.guessCount += 1;
+              }
+              if (Number.isFinite(Number(entry.durationSeconds))) {
+                existing.timeTotal += Number(entry.durationSeconds);
+                existing.timeCount += 1;
+              }
+            }
             players.set(entry.uid, existing);
           });
         const standings = [...players.values()].sort((a, b) => b.streak - a.streak || b.wins - a.wins);
@@ -516,11 +651,14 @@
           const item = document.createElement('li');
           const position = document.createElement('em');
           const name = document.createElement('span');
-          const streak = document.createElement('strong');
+          const metrics = document.createElement('div');
           position.textContent = `${index + 1}.`;
           name.textContent = entry.name;
-          streak.textContent = `${entry.streak} 🔥`;
-          item.append(position, name, streak);
+          metrics.className = 'leader-metrics';
+          const averageGuesses = entry.guessCount ? (entry.guessTotal / entry.guessCount).toFixed(1) : '–';
+          const averageTime = entry.timeCount ? formatDuration(entry.timeTotal / entry.timeCount) : '–';
+          metrics.textContent = `${entry.streak} streak 🔥 · ${averageGuesses} avg guesses · ${averageTime} avg time`;
+          item.append(position, name, metrics);
           list.append(item);
         });
         document.querySelector('#emptyScores').hidden = standings.length !== 0;
