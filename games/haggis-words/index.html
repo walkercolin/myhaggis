@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Haggis Words | My Haggis Games</title>
     <meta name="theme-color" content="#2d1406" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <style>
       :root {
         --bg: #2d1406;
@@ -49,6 +50,7 @@
       .back { color: var(--muted); text-decoration: none; font-weight: 700; }
       .back:hover { color: var(--cream); }
       h1 { margin: 2px 0 0; font-size: clamp(1.7rem, 6vw, 2.7rem); letter-spacing: -0.04em; }
+      .top-actions { display: flex; gap: 9px; }
 
       .button {
         border: 0;
@@ -156,6 +158,33 @@
       .result strong { display: block; font-size: 1.4rem; }
       .result p { margin: 7px 0 14px; color: var(--muted); line-height: 1.45; }
 
+      dialog {
+        width: min(620px, calc(100% - 24px));
+        max-height: min(82vh, 760px);
+        padding: 0;
+        overflow: hidden;
+        color: var(--cream);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #3c1d0d;
+        box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      }
+      dialog::backdrop { background: rgba(20,8,3,.72); backdrop-filter: blur(4px); }
+      .dialog-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 18px; border-bottom: 1px solid var(--line); }
+      .dialog-header h2 { margin: 0; color: var(--cream); font-size: 1.15rem; text-transform: none; letter-spacing: 0; }
+      .dialog-body { max-height: calc(82vh - 72px); padding: 18px; overflow-y: auto; }
+      .close-button { width: 38px; height: 38px; padding: 0; border: 1px solid var(--line); border-radius: 50%; color: var(--cream); background: rgba(255,255,255,.07); cursor: pointer; }
+      .previous-list { display: grid; gap: 9px; }
+      .previous-word { display: flex; justify-content: space-between; align-items: center; gap: 14px; width: 100%; padding: 13px 15px; border: 1px solid var(--line); border-radius: 11px; color: var(--cream); background: rgba(255,255,255,.055); cursor: pointer; text-align: left; }
+      .previous-word:hover { background: rgba(255,255,255,.09); }
+      .previous-word strong { letter-spacing: .08em; }
+      .previous-word span { color: var(--muted); font-size: .84rem; }
+      .history-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+      .history-heading h3 { margin: 0; font-size: 1.45rem; letter-spacing: .06em; }
+      .history-section { margin-top: 18px; }
+      .history-section h4 { margin: 0 0 10px; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+      .history-section .attempt-card + .attempt-card { margin-top: 10px; }
+
       @keyframes pop { 50% { transform: scale(1.08); } }
       @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 
@@ -168,6 +197,7 @@
 
       @media (max-width: 480px) {
         .topbar { align-items: flex-start; }
+        .top-actions { flex-direction: column; }
         .topbar .button { padding: 10px 12px; }
         .side-panel { grid-template-columns: 1fr; }
         .tile { border-radius: 5px; }
@@ -184,7 +214,10 @@
           <a class="back" href="../../">← Family games</a>
           <h1>Haggis Words</h1>
         </div>
-        <button id="newWordButton" class="button secondary" type="button">New word</button>
+        <div class="top-actions">
+          <button id="historyButton" class="button secondary" type="button">Previous words</button>
+          <button id="newWordButton" class="button secondary" type="button">New word</button>
+        </div>
       </header>
 
       <div class="layout">
@@ -227,6 +260,14 @@
         </aside>
       </div>
     </main>
+
+    <dialog id="historyDialog" aria-labelledby="historyTitle">
+      <div class="dialog-header">
+        <h2 id="historyTitle">Previous words</h2>
+        <button id="closeHistoryButton" class="close-button" type="button" aria-label="Close previous words">×</button>
+      </div>
+      <div id="historyContent" class="dialog-body"></div>
+    </dialog>
 
     <section id="accessMessage" class="shell panel" aria-live="polite">Checking family access…</section>
 
@@ -437,10 +478,10 @@
       }
 
       /** Scores a guess accurately when the answer or guess contains repeated letters. */
-      function evaluateGuess(guess) {
+      function evaluateGuess(guess, targetWord = answer) {
         const result = Array(WORD_LENGTH).fill('absent');
         const remaining = {};
-        [...answer].forEach((letter, index) => {
+        [...targetWord].forEach((letter, index) => {
           if (guess[index] === letter) result[index] = 'correct';
           else remaining[letter] = (remaining[letter] || 0) + 1;
         });
@@ -558,6 +599,49 @@
         }
       }
 
+      /** Returns a sortable timestamp from a Firestore result record. */
+      function getResultTimestamp(entry) {
+        return Number(entry.createdAt?.seconds || 0);
+      }
+
+      /** Creates a coloured guess card for one completed family attempt. */
+      function createAttemptCard(entry, targetWord, label) {
+        const card = document.createElement('div');
+        card.className = 'attempt-card';
+        const heading = document.createElement('div');
+        heading.className = 'attempt-heading';
+        const name = document.createElement('strong');
+        const outcome = document.createElement('span');
+        name.textContent = label || entry.playerName || 'Family player';
+        outcome.textContent = entry.won
+          ? `${entry.attempts} guesses · ${formatDuration(entry.durationSeconds)}`
+          : 'Not solved';
+        heading.append(name, outcome);
+        card.append(heading);
+
+        if (Array.isArray(entry.guesses) && entry.guesses.length) {
+          entry.guesses.forEach((guess) => {
+            if (typeof guess !== 'string' || guess.length !== WORD_LENGTH) return;
+            const line = document.createElement('div');
+            line.className = 'guess-line';
+            const result = evaluateGuess(guess, targetWord);
+            [...guess].forEach((letter, index) => {
+              const tile = document.createElement('span');
+              tile.className = `mini-tile ${result[index]}`;
+              tile.textContent = letter;
+              line.append(tile);
+            });
+            card.append(line);
+          });
+        } else {
+          const unavailable = document.createElement('div');
+          unavailable.className = 'empty';
+          unavailable.textContent = 'Guess details were not recorded for this older result.';
+          card.append(unavailable);
+        }
+        return card;
+      }
+
       /** Shows spoiler-free word statistics, then exact family guesses after completion. */
       function renderWordComparison(revealGuesses) {
         const wordResults = allWordResults.filter((entry) => entry.word === answer);
@@ -580,37 +664,97 @@
         history.hidden = !revealGuesses || wordResults.length === 0;
         if (!revealGuesses) return;
 
-        wordResults.forEach((entry) => {
-          const card = document.createElement('div');
-          card.className = 'attempt-card';
-          const heading = document.createElement('div');
-          heading.className = 'attempt-heading';
-          const name = document.createElement('strong');
-          const outcome = document.createElement('span');
-          name.textContent = entry.playerName || 'Family player';
-          outcome.textContent = entry.won
+        wordResults
+          .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a))
+          .forEach((entry) => history.append(createAttemptCard(entry, answer)));
+      }
+
+      /** Lists only words that the signed-in family member has personally completed. */
+      function renderHistoryList() {
+        const content = document.querySelector('#historyContent');
+        const ownResults = allWordResults
+          .filter((entry) => entry.uid === currentUser.uid && typeof entry.word === 'string')
+          .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
+        const latestByWord = new Map();
+        ownResults.forEach((entry) => {
+          if (!latestByWord.has(entry.word)) latestByWord.set(entry.word, entry);
+        });
+        content.replaceChildren();
+        if (!latestByWord.size) {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'Complete a word and it will appear here for review.';
+          content.append(empty);
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'previous-list';
+        latestByWord.forEach((entry, word) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'previous-word';
+          const title = document.createElement('strong');
+          const result = document.createElement('span');
+          title.textContent = word;
+          result.textContent = entry.won
             ? `${entry.attempts} guesses · ${formatDuration(entry.durationSeconds)}`
             : 'Not solved';
-          heading.append(name, outcome);
-          card.append(heading);
-
-          if (Array.isArray(entry.guesses)) {
-            entry.guesses.forEach((guess) => {
-              if (typeof guess !== 'string' || guess.length !== WORD_LENGTH) return;
-              const line = document.createElement('div');
-              line.className = 'guess-line';
-              const result = evaluateGuess(guess);
-              [...guess].forEach((letter, index) => {
-                const tile = document.createElement('span');
-                tile.className = `mini-tile ${result[index]}`;
-                tile.textContent = letter;
-                line.append(tile);
-              });
-              card.append(line);
-            });
-          }
-          history.append(card);
+          button.append(title, result);
+          button.addEventListener('click', () => renderHistoryDetail(word));
+          list.append(button);
         });
+        content.append(list);
+      }
+
+      /** Shows the player's guesses and then the family's attempts for a reviewed word. */
+      function renderHistoryDetail(word) {
+        const content = document.querySelector('#historyContent');
+        const ownResults = allWordResults
+          .filter((entry) => entry.uid === currentUser.uid && entry.word === word)
+          .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
+        if (!ownResults.length) {
+          renderHistoryList();
+          return;
+        }
+        const familyResults = allWordResults
+          .filter((entry) => entry.uid !== currentUser.uid && entry.word === word)
+          .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
+        content.replaceChildren();
+
+        const heading = document.createElement('div');
+        heading.className = 'history-heading';
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'button secondary';
+        back.textContent = '← Back';
+        back.addEventListener('click', renderHistoryList);
+        const title = document.createElement('h3');
+        title.textContent = word;
+        heading.append(back, title);
+        content.append(heading);
+
+        const ownSection = document.createElement('section');
+        ownSection.className = 'history-section';
+        const ownTitle = document.createElement('h4');
+        ownTitle.textContent = 'Your guesses';
+        ownSection.append(ownTitle);
+        ownResults.forEach((entry) => ownSection.append(createAttemptCard(entry, word, 'You')));
+        content.append(ownSection);
+
+        const familySection = document.createElement('section');
+        familySection.className = 'history-section';
+        const familyTitle = document.createElement('h4');
+        familyTitle.textContent = 'Family guesses';
+        familySection.append(familyTitle);
+        if (familyResults.length) {
+          familyResults.forEach((entry) => familySection.append(createAttemptCard(entry, word)));
+        } else {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'No other family member has completed this word yet.';
+          familySection.append(empty);
+        }
+        content.append(familySection);
       }
 
       /** Loads results and displays streak, average guesses and average solving time. */
@@ -669,6 +813,13 @@
         startRound();
       });
       document.querySelector('#nextWordButton').addEventListener('click', startRound);
+      document.querySelector('#historyButton').addEventListener('click', () => {
+        renderHistoryList();
+        document.querySelector('#historyDialog').showModal();
+      });
+      document.querySelector('#closeHistoryButton').addEventListener('click', () => {
+        document.querySelector('#historyDialog').close();
+      });
       document.addEventListener('keydown', (event) => {
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         const key = event.key.toUpperCase();
