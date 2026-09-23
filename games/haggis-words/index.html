@@ -288,7 +288,7 @@
       const GAME_ID = 'haggis-words';
       const MAX_GUESSES = 6;
       const WORD_LENGTH = 5;
-      const ANSWERS = [
+      let ANSWERS = [
         'APPLE','BEACH','BLEND','BLOOM','BRAVE','BREAD','BRICK','BRUSH','CABLE','CHARM',
         'CHEER','CHEST','CLOUD','COAST','CRANE','CREAM','DANCE','DREAM','DRINK','EARTH',
         'FLAME','FLOUR','FOCUS','FRAME','FRESH','FRUIT','GIANT','GLASS','GRACE','GRAPE',
@@ -324,12 +324,14 @@
         'SCALE','SCENE','SCOPE','SCORE','SENSE','SERVE','SEVEN','SHAPE','SHIFT','SHIRT',
         'SHORT','SIXTH','SKILL','SLEEP','SMALL','SMART','SPACE','SPEED','SPEND','STAFF',
         'STAGE','STAND','START','STATE','STEAM','STEEL','STICK','STILL','STOCK','STYLE',
-        'SWEET','TEACH','THANK','THEIR','THEME','THERE','THING','THINK','THREE','THROW',
+        'SWEET','TAKER','TAMER','TEACH','THANK','THEIR','THEME','THERE','THING','THINK','THREE','THROW',
         'TITLE','TODAY','TOPIC','TOTAL','TOUCH','TOWER','TRACK','TRADE','TRIAL','TRUCK',
         'TRUST','TRUTH','UNDER','UNION','VALUE','VIDEO','VISIT','VOICE','WATCH','WHITE',
         'WHOLE','WOMAN','WORDS','WORTH','WRITE','WRONG','YOUNG'
       ];
       const VALID_WORDS = new Set([...ANSWERS, ...EXTRA_GUESSES]);
+      const ANSWER_DICTIONARY_URL = './answer-words.txt?v=2';
+      const GUESS_DICTIONARY_URL = './allowed-words.txt?v=2';
       const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', ['ENTER','Z','X','C','V','B','N','M','⌫']];
       const STATUS_PRIORITY = { absent: 1, present: 2, correct: 3 };
 
@@ -346,6 +348,42 @@
       let roundStartedAt = null;
       let timerInterval = null;
       let allWordResults = [];
+
+      /** Converts a bundled word-list response into unique uppercase five-letter words. */
+      async function parseWordList(response, label) {
+        if (!response.ok) throw new Error(`${label} request failed with ${response.status}`);
+        return [...new Set(
+          (await response.text())
+            .split(/\s+/)
+            .map((word) => word.trim().toUpperCase())
+            .filter((word) => /^[A-Z]{5}$/.test(word))
+        )];
+      }
+
+      /** Loads the answer and guess-only lists while retaining the built-in words as a fallback. */
+      async function loadWordLists() {
+        try {
+          const [answerResponse, guessResponse] = await Promise.all([
+            fetch(ANSWER_DICTIONARY_URL, { cache: 'no-cache' }),
+            fetch(GUESS_DICTIONARY_URL, { cache: 'no-cache' })
+          ]);
+          const [answerWords, guessOnlyWords] = await Promise.all([
+            parseWordList(answerResponse, 'Answer list'),
+            parseWordList(guessResponse, 'Guess-only list')
+          ]);
+          if (answerWords.length !== 2309) throw new Error(`Expected 2,309 answers, received ${answerWords.length}`);
+          if (guessOnlyWords.length !== 10657) throw new Error(`Expected 10,657 guess-only words, received ${guessOnlyWords.length}`);
+
+          const answerSet = new Set(answerWords);
+          if (guessOnlyWords.some((word) => answerSet.has(word))) throw new Error('Answer and guess-only lists overlap');
+
+          ANSWERS = answerWords;
+          VALID_WORDS.clear();
+          [...answerWords, ...guessOnlyWords].forEach((word) => VALID_WORDS.add(word));
+        } catch (error) {
+          console.debug('Expanded word lists could not be loaded; using the built-in lists', error);
+        }
+      }
 
       /** Formats a duration in seconds as minutes and two-digit seconds. */
       function formatDuration(seconds) {
@@ -837,7 +875,7 @@
         currentUser = user;
         try {
           stats = loadStats(user.uid);
-          await loadLeaderboard();
+          await Promise.all([loadLeaderboard(), loadWordLists()]);
           saveStats();
           startRound();
           document.querySelector('#accessMessage').hidden = true;

@@ -1,0 +1,13 @@
+Haggis Words word lists
+=======================
+
+answer-words.txt contains 2,309 words which can be selected as puzzles.
+allowed-words.txt contains 10,657 additional words accepted only as guesses.
+The two lists do not overlap.
+
+Sources:
+https://github.com/Ephimoon/Wordle/blob/main/wordle-answers-2309.txt
+https://github.com/Gregory-Meyer/wordle/blob/master/wordle-allowed-guesses.txt
+
+Haggis Words is an independent family game and is not affiliated with Wordle
+or The New York Times.
