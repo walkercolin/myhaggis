@@ -102,6 +102,7 @@
       .tile.absent { background: var(--absent); border-color: var(--absent); }
       .row.shake { animation: shake .35s ease; }
 
+      .word-number { margin: 0 0 5px; text-align: center; color: var(--gold); font-size: .78rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
       .message { min-height: 28px; margin: 0 0 12px; text-align: center; color: var(--muted); font-weight: 700; }
 
       .keyboard { display: grid; gap: 7px; margin: 0 auto; max-width: 560px; }
@@ -216,7 +217,7 @@
         </div>
         <div class="top-actions">
           <button id="historyButton" class="button secondary" type="button">Previous words</button>
-          <button id="newWordButton" class="button secondary" type="button">New word</button>
+          <button id="newWordButton" class="button secondary" type="button">Abandon word</button>
         </div>
       </header>
 
@@ -229,6 +230,7 @@
             <div class="stat"><small>Time</small><strong id="timer">0:00</strong></div>
           </div>
 
+          <div id="wordNumber" class="word-number">Word 1</div>
           <div id="message" class="message" role="status" aria-live="polite">Guess the five-letter word</div>
           <div id="board" class="board" aria-label="Word guessing board"></div>
 
@@ -243,7 +245,7 @@
 
         <aside class="panel side-panel">
           <div>
-            <h2>This word</h2>
+            <h2 id="comparisonTitle">Word 1 family results</h2>
             <div id="wordSummary" class="word-summary">No previous family results for this word.</div>
             <div id="wordHistory" class="word-history" hidden></div>
           </div>
@@ -255,7 +257,7 @@
           <div>
             <h2>How to play</h2>
             <p class="how">Green means the right letter in the right position. Gold means the letter is elsewhere in the word. Grey means it is not in the word.</p>
-            <p class="how">You have six attempts. When a round ends, keep playing with another randomly selected word.</p>
+            <p class="how">You have six attempts. Every family member plays the same numbered words in the same order.</p>
           </div>
         </aside>
       </div>
@@ -288,6 +290,7 @@
       const GAME_ID = 'haggis-words';
       const MAX_GUESSES = 6;
       const WORD_LENGTH = 5;
+      const WORD_SEQUENCE_VERSION = 1;
       let ANSWERS = [
         'APPLE','BEACH','BLEND','BLOOM','BRAVE','BREAD','BRICK','BRUSH','CABLE','CHARM',
         'CHEER','CHEST','CLOUD','COAST','CRANE','CREAM','DANCE','DREAM','DRINK','EARTH',
@@ -330,7 +333,7 @@
         'WHOLE','WOMAN','WORDS','WORTH','WRITE','WRONG','YOUNG'
       ];
       const VALID_WORDS = new Set([...ANSWERS, ...EXTRA_GUESSES]);
-      const ANSWER_DICTIONARY_URL = './answer-words.txt?v=2';
+      const ANSWER_DICTIONARY_URL = `./answer-words.txt?sequence=${WORD_SEQUENCE_VERSION}`;
       const GUESS_DICTIONARY_URL = './allowed-words.txt?v=2';
       const KEY_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', ['ENTER','Z','X','C','V','B','N','M','⌫']];
       const STATUS_PRIORITY = { absent: 1, present: 2, correct: 3 };
@@ -340,6 +343,7 @@
       const db = getFirestore(app);
       let currentUser = null;
       let answer = '';
+      let currentWordNumber = 1;
       let currentGuess = '';
       let guesses = [];
       let gameOver = false;
@@ -432,20 +436,18 @@
         document.querySelector('#streak').textContent = stats.streak;
       }
 
-      /** Selects a random answer without repeating until the full list is exhausted. */
-      function chooseAnswer() {
-        let used = [];
-        const usedWordsKey = `haggisWordsUsed:${currentUser.uid}`;
-        try { used = JSON.parse(localStorage.getItem(usedWordsKey) || '[]'); } catch (error) { console.debug('Used words could not be read', error); }
-        let available = ANSWERS.filter((word) => !used.includes(word));
-        if (!available.length) {
-          used = [];
-          available = [...ANSWERS];
-        }
-        const selected = available[Math.floor(Math.random() * available.length)];
-        used.push(selected);
-        localStorage.setItem(usedWordsKey, JSON.stringify(used));
-        return selected;
+      /** Finds the next numbered word after this family member's latest saved result. */
+      function getNextWordNumber() {
+        const completedNumbers = allWordResults
+          .filter((entry) => entry.uid === currentUser.uid && Number(entry.wordSequenceVersion) === WORD_SEQUENCE_VERSION)
+          .map((entry) => Number(entry.wordNumber))
+          .filter((number) => Number.isInteger(number) && number > 0);
+        return completedNumbers.length ? Math.max(...completedNumbers) + 1 : 1;
+      }
+
+      /** Selects the permanent answer assigned to a numbered family word. */
+      function chooseAnswer(wordNumber) {
+        return ANSWERS[(wordNumber - 1) % ANSWERS.length];
       }
 
       /** Creates the six-row game board and its thirty letter tiles. */
@@ -487,10 +489,11 @@
         });
       }
 
-      /** Begins another independent word round while retaining player statistics. */
+      /** Begins the signed-in family member's next numbered word. */
       function startRound() {
         if (timerInterval !== null) window.clearInterval(timerInterval);
-        answer = chooseAnswer();
+        currentWordNumber = getNextWordNumber();
+        answer = chooseAnswer(currentWordNumber);
         currentGuess = '';
         guesses = [];
         gameOver = false;
@@ -500,7 +503,10 @@
         buildBoard();
         buildKeyboard();
         updateTimer();
+        document.querySelector('#wordNumber').textContent = `Word ${currentWordNumber}`;
+        document.querySelector('#comparisonTitle').textContent = `Word ${currentWordNumber} family results`;
         document.querySelector('#message').textContent = 'Guess the five-letter word';
+        document.querySelector('#newWordButton').textContent = 'Abandon word';
         document.querySelector('#result').hidden = true;
         renderWordComparison(false);
       }
@@ -593,11 +599,12 @@
         }
         saveStats();
         document.querySelector('#message').textContent = didWin ? 'Lovely!' : `The word was ${answer}`;
-        document.querySelector('#resultTitle').textContent = didWin ? `Solved in ${guesses.length}!` : 'Not this time';
+        document.querySelector('#resultTitle').textContent = didWin ? `Word ${currentWordNumber} solved in ${guesses.length}!` : `Word ${currentWordNumber} not solved`;
         document.querySelector('#resultText').textContent = didWin
           ? `Your current streak is ${stats.streak}.`
           : `The word was ${answer}. Start another whenever you’re ready.`;
         document.querySelector('#result').hidden = false;
+        document.querySelector('#newWordButton').textContent = 'Next word';
 
         try {
           await addDoc(collection(db, 'scores'), {
@@ -607,6 +614,8 @@
             won: didWin,
             attempts: guesses.length,
             word: answer,
+            wordNumber: currentWordNumber,
+            wordSequenceVersion: WORD_SEQUENCE_VERSION,
             guesses: [...guesses],
             durationSeconds,
             streak: stats.streak,
@@ -674,7 +683,9 @@
         } else {
           const unavailable = document.createElement('div');
           unavailable.className = 'empty';
-          unavailable.textContent = 'Guess details were not recorded for this older result.';
+          unavailable.textContent = Array.isArray(entry.guesses)
+            ? 'No guesses were entered.'
+            : 'Guess details were not recorded for this older result.';
           card.append(unavailable);
         }
         return card;
@@ -682,7 +693,10 @@
 
       /** Shows spoiler-free word statistics, then exact family guesses after completion. */
       function renderWordComparison(revealGuesses) {
-        const wordResults = allWordResults.filter((entry) => entry.word === answer);
+        const wordResults = allWordResults.filter((entry) =>
+          Number(entry.wordSequenceVersion) === WORD_SEQUENCE_VERSION &&
+          Number(entry.wordNumber) === currentWordNumber
+        );
         const wins = wordResults.filter((entry) => entry.won && Number.isFinite(Number(entry.attempts)));
         const timedWins = wins.filter((entry) => Number.isFinite(Number(entry.durationSeconds)));
         const averageGuesses = wins.length
@@ -715,7 +729,12 @@
           .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
         const latestByWord = new Map();
         ownResults.forEach((entry) => {
-          if (!latestByWord.has(entry.word)) latestByWord.set(entry.word, entry);
+          const wordNumber = Number(entry.wordNumber);
+          const sequenceVersion = Number(entry.wordSequenceVersion);
+          const key = Number.isInteger(wordNumber) && wordNumber > 0
+            ? `version:${sequenceVersion}:number:${wordNumber}`
+            : `legacy:${entry.word}`;
+          if (!latestByWord.has(key)) latestByWord.set(key, entry);
         });
         content.replaceChildren();
         if (!latestByWord.size) {
@@ -727,35 +746,43 @@
         }
         const list = document.createElement('div');
         list.className = 'previous-list';
-        latestByWord.forEach((entry, word) => {
+        latestByWord.forEach((entry) => {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'previous-word';
           const title = document.createElement('strong');
           const result = document.createElement('span');
-          title.textContent = word;
+          const wordNumber = Number(entry.wordNumber);
+          const sequenceVersion = Number(entry.wordSequenceVersion);
+          title.textContent = Number.isInteger(wordNumber) && wordNumber > 0
+            ? `Word ${wordNumber} · ${entry.word}`
+            : entry.word;
           result.textContent = entry.won
             ? `${entry.attempts} guesses · ${formatDuration(entry.durationSeconds)}`
             : 'Not solved';
           button.append(title, result);
-          button.addEventListener('click', () => renderHistoryDetail(word));
+          button.addEventListener('click', () => renderHistoryDetail(entry.word, wordNumber, sequenceVersion));
           list.append(button);
         });
         content.append(list);
       }
 
       /** Shows the player's guesses and then the family's attempts for a reviewed word. */
-      function renderHistoryDetail(word) {
+      function renderHistoryDetail(word, wordNumber, sequenceVersion) {
         const content = document.querySelector('#historyContent');
+        const hasWordNumber = Number.isInteger(wordNumber) && wordNumber > 0;
+        const matchesRound = (entry) => hasWordNumber
+          ? Number(entry.wordNumber) === wordNumber && Number(entry.wordSequenceVersion) === sequenceVersion
+          : entry.word === word && !Number.isInteger(Number(entry.wordNumber));
         const ownResults = allWordResults
-          .filter((entry) => entry.uid === currentUser.uid && entry.word === word)
+          .filter((entry) => entry.uid === currentUser.uid && matchesRound(entry))
           .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
         if (!ownResults.length) {
           renderHistoryList();
           return;
         }
         const familyResults = allWordResults
-          .filter((entry) => entry.uid !== currentUser.uid && entry.word === word)
+          .filter((entry) => entry.uid !== currentUser.uid && matchesRound(entry))
           .sort((a, b) => getResultTimestamp(b) - getResultTimestamp(a));
         content.replaceChildren();
 
@@ -767,7 +794,7 @@
         back.textContent = '← Back';
         back.addEventListener('click', renderHistoryList);
         const title = document.createElement('h3');
-        title.textContent = word;
+        title.textContent = hasWordNumber ? `Word ${wordNumber} · ${word}` : word;
         heading.append(back, title);
         content.append(heading);
 
@@ -846,9 +873,13 @@
         document.querySelector('#emptyScores').hidden = standings.length !== 0;
       }
 
-      document.querySelector('#newWordButton').addEventListener('click', () => {
-        if (!gameOver && guesses.length && !window.confirm('Abandon this word and start another?')) return;
-        startRound();
+      document.querySelector('#newWordButton').addEventListener('click', async () => {
+        if (gameOver) {
+          startRound();
+          return;
+        }
+        if (!window.confirm(`Abandon Word ${currentWordNumber}? It will count as not solved.`)) return;
+        await finishRound(false);
       });
       document.querySelector('#nextWordButton').addEventListener('click', startRound);
       document.querySelector('#historyButton').addEventListener('click', () => {

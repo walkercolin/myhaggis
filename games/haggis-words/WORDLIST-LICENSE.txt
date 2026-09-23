@@ -1,7 +1,9 @@
 Haggis Words word lists
 =======================
 
-answer-words.txt contains 2,309 words which can be selected as puzzles.
+answer-words.txt contains 2,309 words which can be selected as puzzles. Its
+fixed shuffled order is the permanent family sequence: Word 1, Word 2 and so
+on. Do not reorder this file without deliberately starting a new sequence.
 allowed-words.txt contains 10,657 additional words accepted only as guesses.
 The two lists do not overlap.
 
