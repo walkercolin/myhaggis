@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Haggis Words favicon: letter tiles designed to remain clear at tab size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Haggis Words</title>
+  <rect width="64" height="64" rx="14" fill="#2d1406"/>
+  <rect x="7" y="8" width="23" height="23" rx="4" fill="#4f8a52"/>
+  <rect x="34" y="8" width="23" height="23" rx="4" fill="#c09132"/>
+  <rect x="7" y="35" width="23" height="21" rx="4" fill="#e9772d"/>
+  <rect x="34" y="35" width="23" height="21" rx="4" fill="#5c514c"/>
+  <g fill="#fff5ea" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="900" text-anchor="middle">
+    <text x="18.5" y="25">H</text>
+    <text x="45.5" y="25">A</text>
+    <text x="18.5" y="51">G</text>
+    <text x="45.5" y="51">S</text>
+  </g>
+</svg>
